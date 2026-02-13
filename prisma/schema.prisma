@@ -1,0 +1,231 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
+}
+
+// ─── AUTH.JS MODELS ───────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+
+  accounts    Account[]
+  sessions    Session[]
+  entries     Entry[]
+  collections Collection[]
+  shares      Share[]          @relation("sharedWith")
+  ownedShares Share[]          @relation("sharedBy")
+  aiConfig    AiProviderConfig?
+  tags        Tag[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── DOMAIN MODELS ────────────────────────────────────
+
+model Entry {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title    String
+  content  String    @db.Text
+  type     EntryType @default(NOTE)
+  metadata Json?
+
+  summary      String?   @db.Text
+  aiCategoryId String?
+  aiCategory   Category? @relation(fields: [aiCategoryId], references: [id])
+
+  tags        EntryTag[]
+  collections CollectionEntry[]
+  edgesFrom   EntryEdge[]       @relation("edgeSource")
+  edgesTo     EntryEdge[]       @relation("edgeTarget")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([type])
+}
+
+enum EntryType {
+  NOTE
+  IDEA
+  REMINDER
+  TRIP
+  TASK
+  BOOKMARK
+  JOURNAL
+}
+
+model Category {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+  color       String?
+  icon        String?
+
+  entries Entry[]
+}
+
+model Tag {
+  id     String @id @default(cuid())
+  name   String
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  entries EntryTag[]
+
+  @@unique([name, userId])
+}
+
+model EntryTag {
+  entryId String
+  tagId   String
+  entry   Entry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  tag     Tag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  isAiGenerated Boolean @default(false)
+
+  @@id([entryId, tagId])
+}
+
+// ─── RELATIONSHIPS (GRAPH EDGES) ─────────────────────
+
+model EntryEdge {
+  id       String @id @default(cuid())
+  sourceId String
+  targetId String
+  source   Entry  @relation("edgeSource", fields: [sourceId], references: [id], onDelete: Cascade)
+  target   Entry  @relation("edgeTarget", fields: [targetId], references: [id], onDelete: Cascade)
+
+  relationship  String
+  strength      Float   @default(0.5)
+  isAiGenerated Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  @@unique([sourceId, targetId])
+  @@index([sourceId])
+  @@index([targetId])
+}
+
+// ─── COLLECTIONS & SHARING ────────────────────────────
+
+model Collection {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  color       String?
+  userId      String
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  entries CollectionEntry[]
+  shares  Share[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model CollectionEntry {
+  collectionId String
+  entryId      String
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  entry        Entry      @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  addedAt DateTime @default(now())
+
+  @@id([collectionId, entryId])
+}
+
+model Share {
+  id           String          @id @default(cuid())
+  collectionId String
+  collection   Collection      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  ownerId      String
+  owner        User            @relation("sharedBy", fields: [ownerId], references: [id])
+  sharedWithId String
+  sharedWith   User            @relation("sharedWith", fields: [sharedWithId], references: [id])
+  permission   SharePermission @default(VIEW)
+
+  createdAt DateTime @default(now())
+
+  @@unique([collectionId, sharedWithId])
+}
+
+enum SharePermission {
+  VIEW
+  EDIT
+  ADMIN
+}
+
+// ─── AI PROVIDER CONFIG ──────────────────────────────
+
+model AiProviderConfig {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  provider   AiProvider @default(OPENAI)
+  apiKey     String     @db.Text
+  model      String     @default("gpt-4o-mini")
+  embedModel String     @default("text-embedding-3-small")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum AiProvider {
+  OPENAI
+  ANTHROPIC
+  GOOGLE
+}
