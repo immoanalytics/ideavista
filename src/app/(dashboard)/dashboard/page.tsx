@@ -25,12 +25,12 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">Your ideas at a glance</p>
+          <p className="text-sm text-muted-foreground">Your ideas at a glance</p>
         </div>
-        <Button asChild>
+        <Button asChild className="shrink-0">
           <Link href="/entries/new"><Plus className="h-4 w-4 mr-2" />New Entry</Link>
         </Button>
       </div>
@@ -98,18 +98,21 @@ export default function DashboardPage() {
                   <Link
                     key={entry.id}
                     href={`/entries/${entry.id}`}
-                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
+                    className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
                   >
-                    <Icon className="h-5 w-5 shrink-0" style={{ color: getEntryTypeColor(entry.type) }} />
+                    <Icon className="h-5 w-5 shrink-0 mt-0.5" style={{ color: getEntryTypeColor(entry.type) }} />
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{entry.title}</p>
+                      <div className="flex items-center gap-2 justify-between">
+                        <p className="font-medium truncate">{entry.title}</p>
+                        <span className="text-xs text-muted-foreground shrink-0 hidden sm:inline">{formatRelativeTime(entry.createdAt)}</span>
+                      </div>
                       <p className="text-sm text-muted-foreground truncate">{entry.summary ?? entry.content.slice(0, 100)}</p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Badge variant="secondary" className="text-xs">
-                        {entry.type.charAt(0) + entry.type.slice(1).toLowerCase()}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">{formatRelativeTime(entry.createdAt)}</span>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="secondary" className="text-xs">
+                          {entry.type.charAt(0) + entry.type.slice(1).toLowerCase()}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground sm:hidden">{formatRelativeTime(entry.createdAt)}</span>
+                      </div>
                     </div>
                   </Link>
                 );
