@@ -1,6 +1,72 @@
 import { z } from "zod";
 import { createRouter, protectedProcedure } from "../init";
 import { createEntrySchema, updateEntrySchema } from "@/lib/validators";
+import { generateTitle } from "@/server/ai/title";
+import { extractUrlMetadata } from "@/server/ai/metadata";
+import { categorizeEntry } from "@/server/ai/categorize";
+import { generateEmbedding, findSimilarEntries } from "@/server/ai/embed";
+import { detectRelationships } from "@/server/ai/relate";
+import type { AiProviderConfig, Entry } from "@prisma/client";
+
+async function processEntryPipeline(
+  db: any,
+  config: AiProviderConfig,
+  entry: Pick<Entry, "id" | "title" | "content">,
+  userId: string
+) {
+  try {
+    const categorization = await categorizeEntry(config, entry);
+
+    let categoryId: string | undefined;
+    if (categorization.categoryName) {
+      const category = await db.category.upsert({
+        where: { name: categorization.categoryName },
+        update: {},
+        create: {
+          name: categorization.categoryName,
+          color: categorization.categoryColor,
+        },
+      });
+      categoryId = category.id;
+    }
+
+    await db.entry.update({
+      where: { id: entry.id },
+      data: {
+        type: categorization.type as any,
+        summary: categorization.summary,
+        aiCategoryId: categoryId,
+      },
+    });
+
+    if (categorization.tags?.length) {
+      for (const tagName of categorization.tags) {
+        const tag = await db.tag.upsert({
+          where: { name_userId: { name: tagName, userId } },
+          update: {},
+          create: { name: tagName, userId },
+        });
+        await db.entryTag.upsert({
+          where: { entryId_tagId: { entryId: entry.id, tagId: tag.id } },
+          update: {},
+          create: { entryId: entry.id, tagId: tag.id, isAiGenerated: true },
+        });
+      }
+    }
+
+    try {
+      await generateEmbedding(config, entry);
+      const similar = await findSimilarEntries(db, entry.id, userId);
+      if (similar.length > 0) {
+        await detectRelationships(config, db, entry, similar);
+      }
+    } catch (e) {
+      console.warn("Embedding/relationship detection skipped:", e);
+    }
+  } catch (e) {
+    console.warn("AI processing failed for entry:", entry.id, e);
+  }
+}
 
 export const entryRouter = createRouter({
   list: protectedProcedure
@@ -68,15 +134,55 @@ export const entryRouter = createRouter({
   create: protectedProcedure
     .input(createEntrySchema)
     .mutation(async ({ ctx, input }) => {
+      // 1. Resolve title
+      let title = input.title;
+      const config = await ctx.db.aiProviderConfig.findUnique({
+        where: { userId: ctx.userId },
+      });
+
+      if (!title && config) {
+        try {
+          title = await generateTitle(config, input.content);
+        } catch {
+          // fallback below
+        }
+      }
+      if (!title) {
+        title =
+          input.content.slice(0, 80).replace(/\n/g, " ").trim() +
+          (input.content.length > 80 ? "..." : "");
+      }
+
+      // 2. Extract URL metadata
+      let metadata = input.metadata ?? {};
+      try {
+        const urlMetadata = await extractUrlMetadata(input.content);
+        if (urlMetadata.length > 0) {
+          metadata = { ...metadata, urls: urlMetadata };
+        }
+      } catch {
+        // URL extraction is best-effort
+      }
+
+      // 3. Create entry
       const entry = await ctx.db.entry.create({
         data: {
-          title: input.title,
+          title,
           content: input.content,
           type: input.type,
           userId: ctx.userId,
-          metadata: input.metadata ? JSON.parse(JSON.stringify(input.metadata)) : undefined,
+          metadata:
+            Object.keys(metadata).length > 0
+              ? JSON.parse(JSON.stringify(metadata))
+              : undefined,
         },
       });
+
+      // 4. Fire-and-forget AI processing
+      if (config) {
+        processEntryPipeline(ctx.db, config, entry, ctx.userId).catch(() => {});
+      }
+
       return entry;
     }),
 

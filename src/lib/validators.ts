@@ -11,7 +11,7 @@ export const entryTypeEnum = z.enum([
 ]);
 
 export const createEntrySchema = z.object({
-  title: z.string().min(1, "Title is required").max(200),
+  title: z.string().min(1).max(200).optional(),
   content: z.string().min(1, "Content is required").max(10000),
   type: entryTypeEnum.optional(),
   metadata: z.record(z.unknown()).optional(),

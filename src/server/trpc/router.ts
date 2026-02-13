@@ -6,6 +6,7 @@ import { tagRouter } from "./routers/tag";
 import { graphRouter } from "./routers/graph";
 import { settingsRouter } from "./routers/settings";
 import { aiRouter } from "./routers/ai";
+import { discoverRouter } from "./routers/discover";
 
 export const appRouter = createRouter({
   entry: entryRouter,
@@ -15,6 +16,7 @@ export const appRouter = createRouter({
   graph: graphRouter,
   settings: settingsRouter,
   ai: aiRouter,
+  discover: discoverRouter,
 });
 
 export type AppRouter = typeof appRouter;

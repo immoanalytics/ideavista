@@ -1,14 +1,5 @@
-import { Sidebar } from "@/components/layout/sidebar";
-import { Topbar } from "@/components/layout/topbar";
+import { PanelShell } from "@/components/panels/panel-shell";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="min-h-screen">
-      <Sidebar />
-      <div className="md:pl-64">
-        <Topbar />
-        <main className="p-4 md:p-6">{children}</main>
-      </div>
-    </div>
-  );
+  return <PanelShell />;
 }
