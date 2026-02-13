@@ -8,6 +8,10 @@ import { Toaster } from "sonner";
 export const metadata: Metadata = {
   title: "IdeaVista - Capture Ideas, Discover Connections",
   description: "Capture ideas, reminders, and trips. AI organizes and visualizes connections between them.",
+  icons: {
+    icon: "/icon.svg",
+    apple: "/api/icon?size=180",
+  },
 };
 
 export const viewport: Viewport = {
