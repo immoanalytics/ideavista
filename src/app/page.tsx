@@ -1,11 +1,17 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { auth } from "@/server/auth";
 import { redirect } from "next/navigation";
 import { Lightbulb, Network, Brain, Share2 } from "lucide-react";
+import { GuestButton } from "@/components/auth/guest-button";
 
 export default async function Home() {
   const session = await auth();
   if (session?.user) redirect("/dashboard");
+
+  const cookieStore = await cookies();
+  const isGuest = cookieStore.get("guest_mode")?.value === "true";
+  if (isGuest) redirect("/dashboard");
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -39,12 +45,15 @@ export default async function Home() {
             IdeaVista uses AI to organize your thoughts, find hidden relationships,
             and create beautiful visualizations of how your ideas connect.
           </p>
-          <Link
-            href="/register"
-            className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-8 py-3 rounded-lg text-lg font-medium hover:bg-primary/90 transition-colors"
-          >
-            Start for Free
-          </Link>
+          <div className="flex items-center justify-center gap-4 flex-wrap">
+            <Link
+              href="/register"
+              className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-8 py-3 rounded-lg text-lg font-medium hover:bg-primary/90 transition-colors"
+            >
+              Start for Free
+            </Link>
+            <GuestButton />
+          </div>
         </section>
 
         <section className="container mx-auto px-4 py-16">

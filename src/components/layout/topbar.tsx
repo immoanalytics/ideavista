@@ -1,6 +1,7 @@
 "use client";
 
 import { useSession, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import { Plus, Search, Moon, Sun, LogOut, User, Settings } from "lucide-react";
@@ -20,12 +21,29 @@ import { MobileNav } from "./mobile-nav";
 export function Topbar() {
   const { data: session } = useSession();
   const { theme, setTheme } = useTheme();
+  const router = useRouter();
 
-  const initials = session?.user?.name
-    ?.split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase() ?? "?";
+  const isGuest = !session?.user;
+  const userName = session?.user?.name ?? "Guest";
+  const userEmail = session?.user?.email ?? "guest@ideavista.app";
+
+  const initials = isGuest
+    ? "G"
+    : session?.user?.name
+        ?.split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase() ?? "?";
+
+  async function handleSignOut() {
+    if (isGuest) {
+      await fetch("/api/guest", { method: "DELETE" });
+      router.push("/login");
+      router.refresh();
+    } else {
+      signOut({ callbackUrl: "/login" });
+    }
+  }
 
   return (
     <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:px-6">
@@ -64,7 +82,7 @@ export function Topbar() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-8 w-8 rounded-full">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={session?.user?.image ?? undefined} alt={session?.user?.name ?? ""} />
+                <AvatarImage src={session?.user?.image ?? undefined} alt={userName} />
                 <AvatarFallback className="text-xs">{initials}</AvatarFallback>
               </Avatar>
             </Button>
@@ -72,8 +90,11 @@ export function Topbar() {
           <DropdownMenuContent className="w-56" align="end" forceMount>
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">{session?.user?.name}</p>
-                <p className="text-xs leading-none text-muted-foreground">{session?.user?.email}</p>
+                <p className="text-sm font-medium leading-none">{userName}</p>
+                <p className="text-xs leading-none text-muted-foreground">{userEmail}</p>
+                {isGuest && (
+                  <p className="text-xs text-primary">Guest mode - data is not saved</p>
+                )}
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
@@ -84,8 +105,8 @@ export function Topbar() {
               <Link href="/settings/ai"><Settings className="mr-2 h-4 w-4" />AI Settings</Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/login" })}>
-              <LogOut className="mr-2 h-4 w-4" />Sign out
+            <DropdownMenuItem onClick={handleSignOut}>
+              <LogOut className="mr-2 h-4 w-4" />{isGuest ? "Exit Guest Mode" : "Sign out"}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -4,11 +4,15 @@ import { createCollectionSchema, updateCollectionSchema } from "@/lib/validators
 
 export const collectionRouter = createRouter({
   list: protectedProcedure.query(async ({ ctx }) => {
-    return ctx.db.collection.findMany({
-      where: { userId: ctx.userId },
-      include: { _count: { select: { entries: true, shares: true } } },
-      orderBy: { updatedAt: "desc" },
-    });
+    try {
+      return await ctx.db.collection.findMany({
+        where: { userId: ctx.userId },
+        include: { _count: { select: { entries: true, shares: true } } },
+        orderBy: { updatedAt: "desc" },
+      });
+    } catch {
+      return [];
+    }
   }),
 
   getById: protectedProcedure

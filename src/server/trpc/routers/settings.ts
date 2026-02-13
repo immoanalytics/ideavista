@@ -5,14 +5,18 @@ import { encrypt, decrypt } from "@/server/services/encryption";
 
 export const settingsRouter = createRouter({
   getAiConfig: protectedProcedure.query(async ({ ctx }) => {
-    const config = await ctx.db.aiProviderConfig.findUnique({
-      where: { userId: ctx.userId },
-    });
-    if (!config) return null;
-    return {
-      ...config,
-      apiKey: config.apiKey ? "••••••••" + decrypt(config.apiKey).slice(-4) : "",
-    };
+    try {
+      const config = await ctx.db.aiProviderConfig.findUnique({
+        where: { userId: ctx.userId },
+      });
+      if (!config) return null;
+      return {
+        ...config,
+        apiKey: config.apiKey ? "••••••••" + decrypt(config.apiKey).slice(-4) : "",
+      };
+    } catch {
+      return null;
+    }
   }),
 
   updateAiConfig: protectedProcedure
@@ -38,10 +42,18 @@ export const settingsRouter = createRouter({
     }),
 
   getProfile: protectedProcedure.query(async ({ ctx }) => {
-    return ctx.db.user.findUnique({
-      where: { id: ctx.userId },
-      select: { id: true, name: true, email: true, image: true },
-    });
+    try {
+      return await ctx.db.user.findUnique({
+        where: { id: ctx.userId },
+        select: { id: true, name: true, email: true, image: true },
+      });
+    } catch {
+      // Guest mode or DB not available
+      if (ctx.isGuest) {
+        return { id: ctx.userId, name: "Guest", email: "guest@ideavista.app", image: null };
+      }
+      return null;
+    }
   }),
 
   updateProfile: protectedProcedure

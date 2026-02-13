@@ -10,8 +10,9 @@ export const graphRouter = createRouter({
       }).optional()
     )
     .query(async ({ ctx, input }) => {
+      try {
       const where: any = { userId: ctx.userId };
-      if (input?.type) where.type = input.type;
+      if (input?.type && input.type !== "all") where.type = input.type;
       if (input?.search) {
         where.OR = [
           { title: { contains: input.search, mode: "insensitive" } },
@@ -61,5 +62,8 @@ export const graphRouter = createRouter({
         }));
 
       return { nodes, edges: graphEdges };
+      } catch {
+        return { nodes: [], edges: [] };
+      }
     }),
 });

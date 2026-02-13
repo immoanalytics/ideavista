@@ -13,35 +13,39 @@ export const entryRouter = createRouter({
       })
     )
     .query(async ({ ctx, input }) => {
-      const entries = await ctx.db.entry.findMany({
-        where: {
-          userId: ctx.userId,
-          ...(input.type ? { type: input.type as any } : {}),
-          ...(input.search
-            ? {
-                OR: [
-                  { title: { contains: input.search, mode: "insensitive" } },
-                  { content: { contains: input.search, mode: "insensitive" } },
-                ],
-              }
-            : {}),
-        },
-        include: {
-          aiCategory: true,
-          tags: { include: { tag: true } },
-        },
-        orderBy: { createdAt: "desc" },
-        take: input.limit + 1,
-        ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),
-      });
+      try {
+        const entries = await ctx.db.entry.findMany({
+          where: {
+            userId: ctx.userId,
+            ...(input.type && input.type !== "all" ? { type: input.type as any } : {}),
+            ...(input.search
+              ? {
+                  OR: [
+                    { title: { contains: input.search, mode: "insensitive" as const } },
+                    { content: { contains: input.search, mode: "insensitive" as const } },
+                  ],
+                }
+              : {}),
+          },
+          include: {
+            aiCategory: true,
+            tags: { include: { tag: true } },
+          },
+          orderBy: { createdAt: "desc" },
+          take: input.limit + 1,
+          ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),
+        });
 
-      let nextCursor: string | undefined;
-      if (entries.length > input.limit) {
-        const next = entries.pop();
-        nextCursor = next?.id;
+        let nextCursor: string | undefined;
+        if (entries.length > input.limit) {
+          const next = entries.pop();
+          nextCursor = next?.id;
+        }
+
+        return { entries, nextCursor };
+      } catch {
+        return { entries: [], nextCursor: undefined };
       }
-
-      return { entries, nextCursor };
     }),
 
   getById: protectedProcedure
@@ -102,12 +106,16 @@ export const entryRouter = createRouter({
     }),
 
   stats: protectedProcedure.query(async ({ ctx }) => {
-    const counts = await ctx.db.entry.groupBy({
-      by: ["type"],
-      where: { userId: ctx.userId },
-      _count: true,
-    });
-    const total = counts.reduce((sum, c) => sum + c._count, 0);
-    return { total, byType: counts };
+    try {
+      const counts = await ctx.db.entry.groupBy({
+        by: ["type"],
+        where: { userId: ctx.userId },
+        _count: true,
+      });
+      const total = counts.reduce((sum, c) => sum + c._count, 0);
+      return { total, byType: counts };
+    } catch {
+      return { total: 0, byType: [] };
+    }
   }),
 });

@@ -3,11 +3,15 @@ import { createRouter, protectedProcedure } from "../init";
 
 export const tagRouter = createRouter({
   list: protectedProcedure.query(async ({ ctx }) => {
-    return ctx.db.tag.findMany({
-      where: { userId: ctx.userId },
-      include: { _count: { select: { entries: true } } },
-      orderBy: { name: "asc" },
-    });
+    try {
+      return await ctx.db.tag.findMany({
+        where: { userId: ctx.userId },
+        include: { _count: { select: { entries: true } } },
+        orderBy: { name: "asc" },
+      });
+    } catch {
+      return [];
+    }
   }),
 
   create: protectedProcedure

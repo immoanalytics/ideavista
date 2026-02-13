@@ -57,15 +57,19 @@ export const shareRouter = createRouter({
     }),
 
   listSharedWithMe: protectedProcedure.query(async ({ ctx }) => {
-    return ctx.db.share.findMany({
-      where: { sharedWithId: ctx.userId },
-      include: {
-        collection: {
-          include: { _count: { select: { entries: true } } },
+    try {
+      return await ctx.db.share.findMany({
+        where: { sharedWithId: ctx.userId },
+        include: {
+          collection: {
+            include: { _count: { select: { entries: true } } },
+          },
+          owner: { select: { id: true, name: true, email: true, image: true } },
         },
-        owner: { select: { id: true, name: true, email: true, image: true } },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+        orderBy: { createdAt: "desc" },
+      });
+    } catch {
+      return [];
+    }
   }),
 });
