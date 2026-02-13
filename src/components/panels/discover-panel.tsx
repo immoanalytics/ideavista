@@ -22,7 +22,7 @@ export function DiscoverPanel({ onOpenEntry }: DiscoverPanelProps) {
           <h1 className="text-lg font-semibold">Discover</h1>
         </div>
         {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-40 w-full rounded-xl" />
+          <Skeleton key={i} className="h-40 w-full rounded-xl skeleton-smooth" style={{ animationDelay: `${i * 150}ms` }} />
         ))}
       </div>
     );
@@ -36,14 +36,14 @@ export function DiscoverPanel({ onOpenEntry }: DiscoverPanelProps) {
 
   return (
     <div className="h-full overflow-y-auto px-4 pt-10 pb-4 space-y-4">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 animate-fade-in">
         <Compass className="h-5 w-5 text-primary" />
         <h1 className="text-lg font-semibold">Discover</h1>
       </div>
 
       {/* Category Groups */}
-      {data?.categories.map((category) => (
-        <Card key={category.id} className="overflow-hidden">
+      {data?.categories.map((category, i) => (
+        <Card key={category.id} className="overflow-hidden animate-fade-in-up" style={{ animationDelay: `${i * 80}ms` }}>
           <CardHeader
             className="pb-2"
             style={{ borderLeft: `4px solid ${category.color ?? "#6B7280"}` }}
@@ -64,7 +64,7 @@ export function DiscoverPanel({ onOpenEntry }: DiscoverPanelProps) {
                 <button
                   key={entry.id}
                   onClick={() => onOpenEntry(entry.id)}
-                  className="snap-start shrink-0 w-48 text-left rounded-lg bg-muted/50 p-3 hover:bg-muted transition-colors"
+                  className="snap-start shrink-0 w-48 text-left rounded-lg bg-muted/50 p-3 hover:bg-muted transition-all duration-200 active:scale-[0.97]"
                 >
                   <p className="font-medium text-sm line-clamp-2">{entry.title}</p>
                   {entry.summary && (
@@ -94,7 +94,7 @@ export function DiscoverPanel({ onOpenEntry }: DiscoverPanelProps) {
       ))}
 
       {/* Rich Media Cards (entries with URL metadata) */}
-      {data?.richEntries?.map((entry: any) => {
+      {data?.richEntries?.map((entry: any, i: number) => {
         const urls = (entry.metadata as any)?.urls ?? [];
         const firstUrl = urls[0];
         if (!firstUrl) return null;
@@ -102,15 +102,16 @@ export function DiscoverPanel({ onOpenEntry }: DiscoverPanelProps) {
           <button
             key={entry.id}
             onClick={() => onOpenEntry(entry.id)}
-            className="w-full text-left"
+            className="w-full text-left animate-fade-in-up"
+            style={{ animationDelay: `${(data?.categories?.length ?? 0) * 80 + i * 80}ms` }}
           >
-            <Card className="overflow-hidden hover:bg-muted/30 transition-colors">
+            <Card className="overflow-hidden hover:bg-muted/30 transition-all duration-200 active:scale-[0.98]">
               {firstUrl.image && (
                 <div className="aspect-video bg-muted overflow-hidden">
                   <img
                     src={firstUrl.image}
                     alt=""
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                     loading="lazy"
                   />
                 </div>
@@ -135,7 +136,7 @@ export function DiscoverPanel({ onOpenEntry }: DiscoverPanelProps) {
 
       {/* Uncategorized entries */}
       {data?.uncategorized && data.uncategorized.length > 0 && (
-        <Card>
+        <Card className="animate-fade-in-up" style={{ animationDelay: "300ms" }}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">Recent</CardTitle>
           </CardHeader>
@@ -144,7 +145,7 @@ export function DiscoverPanel({ onOpenEntry }: DiscoverPanelProps) {
               <button
                 key={entry.id}
                 onClick={() => onOpenEntry(entry.id)}
-                className="w-full text-left p-2 rounded-lg hover:bg-muted/50 transition-colors"
+                className="w-full text-left p-2 rounded-lg hover:bg-muted/50 transition-all duration-200 active:scale-[0.98]"
               >
                 <p className="text-sm font-medium truncate">{entry.title}</p>
                 <p className="text-xs text-muted-foreground truncate">
@@ -158,7 +159,7 @@ export function DiscoverPanel({ onOpenEntry }: DiscoverPanelProps) {
 
       {/* Tag Cloud */}
       {data?.topTags && data.topTags.length > 0 && (
-        <Card>
+        <Card className="animate-fade-in-up" style={{ animationDelay: "400ms" }}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">Themes</CardTitle>
           </CardHeader>
@@ -177,9 +178,9 @@ export function DiscoverPanel({ onOpenEntry }: DiscoverPanelProps) {
       {/* Empty state */}
       {!hasContent && (
         <div className="text-center py-16 text-muted-foreground">
-          <Compass className="h-12 w-12 mx-auto mb-4 opacity-20" />
-          <p className="text-lg font-medium">No discoveries yet</p>
-          <p className="text-sm mt-1">Swipe left to add your first thought</p>
+          <Compass className="h-12 w-12 mx-auto mb-4 opacity-20 animate-fade-in-up" />
+          <p className="text-lg font-medium animate-fade-in-up stagger-1">No discoveries yet</p>
+          <p className="text-sm mt-1 animate-fade-in-up stagger-2">Swipe left to add your first thought</p>
         </div>
       )}
     </div>

@@ -55,7 +55,7 @@ function InputBox({
       />
       <Button
         size="icon"
-        className="rounded-full h-10 w-10 shrink-0"
+        className="rounded-full h-10 w-10 shrink-0 transition-all duration-200 active:scale-90"
         onClick={onSubmit}
         disabled={!content.trim() || isPending}
       >
@@ -120,14 +120,14 @@ export function InputPanel({ onOpenSettings, onOpenEntry }: InputPanelProps) {
 
         {/* Centered content */}
         <div className="flex-1 flex flex-col items-center justify-center px-6">
-          <Lightbulb className="h-12 w-12 mb-4 text-primary/20" />
-          <p className="text-xl font-semibold text-center">
+          <Lightbulb className="h-12 w-12 mb-4 text-primary/20 animate-fade-in-up" />
+          <p className="text-xl font-semibold text-center animate-fade-in-up stagger-1">
             What&apos;s on your mind?
           </p>
-          <p className="text-sm text-muted-foreground mt-1 text-center mb-6">
+          <p className="text-sm text-muted-foreground mt-1 text-center mb-6 animate-fade-in-up stagger-2">
             Paste a link, jot a thought, plan a trip...
           </p>
-          <div className="w-full max-w-md">
+          <div className="w-full max-w-md animate-fade-in-up stagger-3">
             <InputBox
               content={content}
               setContent={setContent}
@@ -159,7 +159,7 @@ export function InputPanel({ onOpenSettings, onOpenEntry }: InputPanelProps) {
       <div className="flex-1 overflow-y-auto px-4 pb-2 flex flex-col-reverse gap-2">
         {/* Pending optimistic bubble */}
         {pendingContent && (
-          <div className="flex justify-end">
+          <div className="flex justify-end animate-fade-in-up">
             <div className="bg-primary/10 rounded-2xl rounded-br-sm px-4 py-2.5 max-w-[85%]">
               <p className="text-sm whitespace-pre-wrap">{pendingContent}</p>
               <div className="flex items-center gap-1 mt-1">
@@ -172,7 +172,7 @@ export function InputPanel({ onOpenSettings, onOpenEntry }: InputPanelProps) {
           </div>
         )}
 
-        {entries.data?.entries.map((entry) => {
+        {entries.data?.entries.map((entry, index) => {
           const urls = (entry.metadata as any)?.urls;
           const firstImage = urls?.[0]?.image;
 
@@ -180,15 +180,16 @@ export function InputPanel({ onOpenSettings, onOpenEntry }: InputPanelProps) {
             <button
               key={entry.id}
               onClick={() => onOpenEntry(entry.id)}
-              className="flex justify-end text-left"
+              className="flex justify-end text-left animate-fade-in-up"
+              style={{ animationDelay: `${Math.min(index * 50, 400)}ms` }}
             >
-              <div className="bg-muted rounded-2xl rounded-br-sm px-4 py-2.5 max-w-[85%]">
+              <div className="bg-muted rounded-2xl rounded-br-sm px-4 py-2.5 max-w-[85%] transition-all duration-200 hover:bg-muted/80 active:scale-[0.98]">
                 {firstImage && (
                   <div className="rounded-lg overflow-hidden mb-2 -mx-1 -mt-0.5">
                     <img
                       src={firstImage}
                       alt=""
-                      className="w-full h-32 object-cover"
+                      className="w-full h-32 object-cover transition-transform duration-300 hover:scale-105"
                       loading="lazy"
                     />
                   </div>
@@ -228,7 +229,7 @@ export function InputPanel({ onOpenSettings, onOpenEntry }: InputPanelProps) {
 
       {/* Input area — bottom */}
       <div
-        className="border-t bg-background px-4 py-3"
+        className="border-t bg-background px-4 py-3 animate-fade-in"
         style={{
           paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))",
         }}
