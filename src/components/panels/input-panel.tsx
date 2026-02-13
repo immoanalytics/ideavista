@@ -13,6 +13,62 @@ interface InputPanelProps {
   onOpenEntry: (id: string) => void;
 }
 
+function InputBox({
+  content,
+  setContent,
+  onSubmit,
+  isPending,
+  textareaRef,
+}: {
+  content: string;
+  setContent: (v: string) => void;
+  onSubmit: () => void;
+  isPending: boolean;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+}) {
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      onSubmit();
+    }
+  }
+
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (el) {
+      el.style.height = "auto";
+      el.style.height = Math.min(el.scrollHeight, 120) + "px";
+    }
+  }, [content, textareaRef]);
+
+  return (
+    <div className="flex items-end gap-2">
+      <textarea
+        ref={textareaRef}
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder="Paste anything..."
+        rows={1}
+        className="flex-1 resize-none rounded-xl border bg-muted/50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+        style={{ maxHeight: 120 }}
+      />
+      <Button
+        size="icon"
+        className="rounded-full h-10 w-10 shrink-0"
+        onClick={onSubmit}
+        disabled={!content.trim() || isPending}
+      >
+        {isPending ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Send className="h-4 w-4" />
+        )}
+      </Button>
+    </div>
+  );
+}
+
 export function InputPanel({ onOpenSettings, onOpenEntry }: InputPanelProps) {
   const [content, setContent] = useState("");
   const [pendingContent, setPendingContent] = useState<string | null>(null);
@@ -26,6 +82,7 @@ export function InputPanel({ onOpenSettings, onOpenEntry }: InputPanelProps) {
       setPendingContent(null);
       utils.entry.list.invalidate();
       utils.entry.stats.invalidate();
+      utils.discover.feed.invalidate();
     },
     onError: (err) => {
       setPendingContent(null);
@@ -41,22 +98,50 @@ export function InputPanel({ onOpenSettings, onOpenEntry }: InputPanelProps) {
     createEntry.mutate({ content: trimmed });
   }
 
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit();
-    }
+  const isEmpty =
+    !entries.isLoading &&
+    entries.data?.entries.length === 0 &&
+    !pendingContent;
+
+  // Empty state: centered layout
+  if (isEmpty) {
+    return (
+      <div className="flex flex-col h-full bg-background">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 pt-10 pb-2">
+          <div className="flex items-center gap-2">
+            <Lightbulb className="h-5 w-5 text-primary" />
+            <h1 className="text-lg font-semibold">IdeaVista</h1>
+          </div>
+          <Button variant="ghost" size="icon" onClick={onOpenSettings}>
+            <Settings className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Centered content */}
+        <div className="flex-1 flex flex-col items-center justify-center px-6">
+          <Lightbulb className="h-12 w-12 mb-4 text-primary/20" />
+          <p className="text-xl font-semibold text-center">
+            What&apos;s on your mind?
+          </p>
+          <p className="text-sm text-muted-foreground mt-1 text-center mb-6">
+            Paste a link, jot a thought, plan a trip...
+          </p>
+          <div className="w-full max-w-md">
+            <InputBox
+              content={content}
+              setContent={setContent}
+              onSubmit={handleSubmit}
+              isPending={createEntry.isPending}
+              textareaRef={textareaRef}
+            />
+          </div>
+        </div>
+      </div>
+    );
   }
 
-  // Auto-resize textarea
-  useEffect(() => {
-    const el = textareaRef.current;
-    if (el) {
-      el.style.height = "auto";
-      el.style.height = Math.min(el.scrollHeight, 120) + "px";
-    }
-  }, [content]);
-
+  // Has entries: bottom-anchored layout
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Header */}
@@ -79,7 +164,9 @@ export function InputPanel({ onOpenSettings, onOpenEntry }: InputPanelProps) {
               <p className="text-sm whitespace-pre-wrap">{pendingContent}</p>
               <div className="flex items-center gap-1 mt-1">
                 <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">Processing...</span>
+                <span className="text-xs text-muted-foreground">
+                  Processing...
+                </span>
               </div>
             </div>
           </div>
@@ -121,7 +208,11 @@ export function InputPanel({ onOpenSettings, onOpenEntry }: InputPanelProps) {
                     </Badge>
                   )}
                   {entry.tags?.slice(0, 2).map((t) => (
-                    <Badge key={t.tag.id} variant="outline" className="text-xs h-5">
+                    <Badge
+                      key={t.tag.id}
+                      variant="outline"
+                      className="text-xs h-5"
+                    >
                       {t.tag.name}
                     </Badge>
                   ))}
@@ -133,45 +224,22 @@ export function InputPanel({ onOpenSettings, onOpenEntry }: InputPanelProps) {
             </button>
           );
         })}
-
-        {/* Empty state */}
-        {!entries.isLoading && entries.data?.entries.length === 0 && !pendingContent && (
-          <div className="flex-1 flex items-center justify-center text-center text-muted-foreground py-20">
-            <div>
-              <Lightbulb className="h-12 w-12 mx-auto mb-4 opacity-20" />
-              <p className="text-lg font-medium">What&apos;s on your mind?</p>
-              <p className="text-sm mt-1">Paste a link, jot a thought, plan a trip...</p>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Input area */}
-      <div className="border-t bg-background px-4 py-3" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
-        <div className="flex items-end gap-2">
-          <textarea
-            ref={textareaRef}
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Paste anything..."
-            rows={1}
-            className="flex-1 resize-none rounded-xl border bg-muted/50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-            style={{ maxHeight: 120 }}
-          />
-          <Button
-            size="icon"
-            className="rounded-full h-10 w-10 shrink-0"
-            onClick={handleSubmit}
-            disabled={!content.trim() || createEntry.isPending}
-          >
-            {createEntry.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
+      {/* Input area — bottom */}
+      <div
+        className="border-t bg-background px-4 py-3"
+        style={{
+          paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))",
+        }}
+      >
+        <InputBox
+          content={content}
+          setContent={setContent}
+          onSubmit={handleSubmit}
+          isPending={createEntry.isPending}
+          textareaRef={textareaRef}
+        />
       </div>
     </div>
   );
