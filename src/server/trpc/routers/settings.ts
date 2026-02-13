@@ -22,23 +22,36 @@ export const settingsRouter = createRouter({
   updateAiConfig: protectedProcedure
     .input(aiConfigSchema)
     .mutation(async ({ ctx, input }) => {
-      const encryptedKey = encrypt(input.apiKey);
-      return ctx.db.aiProviderConfig.upsert({
-        where: { userId: ctx.userId },
-        update: {
-          provider: input.provider,
-          apiKey: encryptedKey,
-          model: input.model,
-          embedModel: input.embedModel,
-        },
-        create: {
-          userId: ctx.userId,
-          provider: input.provider,
-          apiKey: encryptedKey,
-          model: input.model,
-          embedModel: input.embedModel,
-        },
-      });
+      if (ctx.isGuest) {
+        throw new (await import("@trpc/server")).TRPCError({
+          code: "FORBIDDEN",
+          message: "AI configuration cannot be saved in guest mode. Please create an account first.",
+        });
+      }
+      try {
+        const encryptedKey = encrypt(input.apiKey);
+        return await ctx.db.aiProviderConfig.upsert({
+          where: { userId: ctx.userId },
+          update: {
+            provider: input.provider,
+            apiKey: encryptedKey,
+            model: input.model,
+            embedModel: input.embedModel,
+          },
+          create: {
+            userId: ctx.userId,
+            provider: input.provider,
+            apiKey: encryptedKey,
+            model: input.model,
+            embedModel: input.embedModel,
+          },
+        });
+      } catch (error: any) {
+        throw new (await import("@trpc/server")).TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database is not set up. Run: docker compose up -d && npx prisma migrate dev",
+        });
+      }
     }),
 
   getProfile: protectedProcedure.query(async ({ ctx }) => {
@@ -59,6 +72,12 @@ export const settingsRouter = createRouter({
   updateProfile: protectedProcedure
     .input(z.object({ name: z.string().min(2).max(100).optional() }))
     .mutation(async ({ ctx, input }) => {
+      if (ctx.isGuest) {
+        throw new (await import("@trpc/server")).TRPCError({
+          code: "FORBIDDEN",
+          message: "Profile cannot be updated in guest mode. Please create an account first.",
+        });
+      }
       return ctx.db.user.update({
         where: { id: ctx.userId },
         data: { name: input.name },
