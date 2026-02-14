@@ -78,6 +78,7 @@ model Entry {
   metadata Json?
 
   summary      String?   @db.Text
+  embedding    String?   @db.Text
   aiCategoryId String?
   aiCategory   Category? @relation(fields: [aiCategoryId], references: [id])
 

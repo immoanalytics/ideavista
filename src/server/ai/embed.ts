@@ -1,24 +1,34 @@
 import { embed } from "ai";
-import type { AiProviderConfig, Entry, PrismaClient } from "@prisma/client";
+import type { AiProviderConfig, Entry } from "@prisma/client";
 import { getUserEmbedModel } from "./provider";
-import { db } from "@/server/db";
+
+function cosineSimilarity(a: number[], b: number[]): number {
+  let dot = 0;
+  let normA = 0;
+  let normB = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    normA += a[i] * a[i];
+    normB += b[i] * b[i];
+  }
+  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+}
 
 export async function generateEmbedding(
   config: AiProviderConfig,
-  entry: Pick<Entry, "id" | "title" | "content">
+  entry: Pick<Entry, "id" | "title" | "content">,
+  prisma: any
 ) {
   const model = getUserEmbedModel(config);
   const text = `${entry.title}\n${entry.content}`;
 
   const { embedding } = await embed({ model, value: text });
 
-  // Store via raw SQL (pgvector)
-  const vectorStr = `[${embedding.join(",")}]`;
-  await db.$executeRawUnsafe(
-    `UPDATE "Entry" SET "embedding" = $1::vector WHERE "id" = $2`,
-    vectorStr,
-    entry.id
-  );
+  // Store as JSON string
+  await prisma.entry.update({
+    where: { id: entry.id },
+    data: { embedding: JSON.stringify(embedding) },
+  });
 
   return embedding;
 }
@@ -30,19 +40,35 @@ export async function findSimilarEntries(
   limit: number = 10,
   threshold: number = 0.7
 ): Promise<Array<{ id: string; title: string; content: string; similarity: number }>> {
-  const results = await prisma.$queryRawUnsafe(
-    `SELECT e."id", e."title", e."content",
-            1 - (e."embedding" <=> (SELECT "embedding" FROM "Entry" WHERE "id" = $1)) as similarity
-     FROM "Entry" e
-     WHERE e."userId" = $2
-       AND e."id" != $1
-       AND e."embedding" IS NOT NULL
-     ORDER BY e."embedding" <=> (SELECT "embedding" FROM "Entry" WHERE "id" = $1)
-     LIMIT $3`,
-    entryId,
-    userId,
-    limit
-  );
+  // Get the source entry's embedding
+  const source = await prisma.entry.findUnique({
+    where: { id: entryId },
+    select: { embedding: true },
+  });
 
-  return (results as any[]).filter((r: any) => r.similarity >= threshold);
+  if (!source?.embedding) return [];
+
+  const sourceEmbedding: number[] = JSON.parse(source.embedding);
+
+  // Get all other entries with embeddings for this user
+  const candidates = await prisma.entry.findMany({
+    where: {
+      userId,
+      id: { not: entryId },
+      embedding: { not: null },
+    },
+    select: { id: true, title: true, content: true, embedding: true },
+  });
+
+  // Compute cosine similarity in JS
+  const results = candidates
+    .map((c: any) => {
+      const sim = cosineSimilarity(sourceEmbedding, JSON.parse(c.embedding));
+      return { id: c.id, title: c.title, content: c.content, similarity: sim };
+    })
+    .filter((r: any) => r.similarity >= threshold)
+    .sort((a: any, b: any) => b.similarity - a.similarity)
+    .slice(0, limit);
+
+  return results;
 }

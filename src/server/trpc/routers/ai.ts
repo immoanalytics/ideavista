@@ -67,7 +67,7 @@ export const aiRouter = createRouter({
 
       // Step 2: Generate embedding and find relationships
       try {
-        await generateEmbedding(config, entry);
+        await generateEmbedding(config, entry, ctx.db);
         const similar = await findSimilarEntries(ctx.db, entry.id, ctx.userId);
         if (similar.length > 0) {
           await detectRelationships(config, ctx.db, entry, similar);
