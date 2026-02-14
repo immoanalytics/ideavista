@@ -42,7 +42,7 @@ function InputBox({
   }, [content, textareaRef]);
 
   return (
-    <div className="flex items-end gap-2">
+    <div className="relative">
       <textarea
         ref={textareaRef}
         value={content}
@@ -50,12 +50,12 @@ function InputBox({
         onKeyDown={handleKeyDown}
         placeholder="Paste anything..."
         rows={1}
-        className="flex-1 resize-none rounded-xl border bg-muted/50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+        className="w-full resize-none rounded-xl border bg-muted/50 px-4 py-2.5 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
         style={{ maxHeight: 120 }}
       />
       <Button
         size="icon"
-        className="rounded-full h-10 w-10 shrink-0 transition-all duration-200 active:scale-90"
+        className="rounded-full h-8 w-8 absolute right-2 bottom-1.5 transition-all duration-200 active:scale-90"
         onClick={onSubmit}
         disabled={!content.trim() || isPending}
       >
