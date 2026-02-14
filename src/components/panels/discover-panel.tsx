@@ -151,7 +151,7 @@ function FeaturedCard({
       </div>
 
       {/* Body */}
-      <div className="bg-card p-4 border border-t-0 rounded-b-2xl">
+      <div className="bg-card p-4 border border-t-0 border-border/50 rounded-b-2xl">
         <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">
           {entry.summary ?? entry.content}
         </p>
@@ -195,7 +195,7 @@ function CompactCard({
   return (
     <button
       onClick={onClick}
-      className="w-full text-left rounded-xl overflow-hidden shadow-sm border bg-card transition-all duration-200 active:scale-[0.98] hover:shadow-md flex h-28"
+      className="w-full text-left rounded-xl overflow-hidden shadow-sm border border-border/50 bg-card transition-all duration-200 active:scale-[0.98] hover:shadow-md flex h-28"
     >
       {/* Thumbnail */}
       <div

@@ -76,15 +76,15 @@ export function PanelContainer({ inputPanel, archivePanel, discoverPanel }: Pane
   return (
     <div className="h-dvh overflow-hidden" {...handlers}>
       {/* Panel indicator dots */}
-      <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 flex gap-2">
+      <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1.5">
         {Array.from({ length: PANEL_COUNT }).map((_, i) => (
           <button
             key={i}
             onClick={() => goTo(i)}
             aria-label={PANEL_LABELS[i]}
             className={cn(
-              "w-2 h-2 rounded-full transition-all",
-              activePanel === i ? "bg-primary w-4" : "bg-muted-foreground/30"
+              "h-1.5 rounded-full transition-all duration-300",
+              activePanel === i ? "bg-primary w-5" : "bg-muted-foreground/25 w-1.5"
             )}
           />
         ))}

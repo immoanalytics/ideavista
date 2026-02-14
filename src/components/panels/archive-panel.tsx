@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Archive, X } from "lucide-react";
+import { Search, BookOpen, X } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Badge } from "@/components/ui/badge";
-import { formatRelativeTime, getEntryTypeColor } from "@/lib/utils";
+import { cn, formatRelativeTime, getEntryTypeColor } from "@/lib/utils";
 
 const ENTRY_TYPES = ["all", "NOTE", "IDEA", "REMINDER", "TRIP", "TASK", "BOOKMARK", "JOURNAL"] as const;
 
@@ -29,11 +29,11 @@ export function ArchivePanel({ onOpenEntry }: ArchivePanelProps) {
       {/* Header */}
       <div className="px-4 pt-10 pb-3 shrink-0">
         <div className="flex items-center gap-2 mb-3">
-          <Archive className="h-5 w-5 text-primary" />
+          <BookOpen className="h-5 w-5 text-primary" />
           <h1 className="text-lg font-semibold">Idea Book</h1>
           {stats.data && (
             <span className="text-xs text-muted-foreground ml-auto">
-              {stats.data.total} notes
+              {stats.data.total} ideas
             </span>
           )}
         </div>
@@ -45,13 +45,13 @@ export function ArchivePanel({ onOpenEntry }: ArchivePanelProps) {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search notes..."
-            className="w-full rounded-lg border bg-muted/50 pl-9 pr-8 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+            placeholder="Search ideas..."
+            className="w-full rounded-xl border border-border/60 bg-card pl-9 pr-8 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 placeholder:text-muted-foreground/60"
           />
           {search && (
             <button
               onClick={() => setSearch("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-muted"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-muted"
             >
               <X className="h-3.5 w-3.5 text-muted-foreground" />
             </button>
@@ -59,16 +59,17 @@ export function ArchivePanel({ onOpenEntry }: ArchivePanelProps) {
         </div>
 
         {/* Type filter chips */}
-        <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+        <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
           {ENTRY_TYPES.map((type) => (
             <button
               key={type}
               onClick={() => setTypeFilter(type)}
-              className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+              className={cn(
+                "shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all",
                 typeFilter === type
-                  ? "bg-primary text-primary-foreground"
+                  ? "bg-primary text-primary-foreground shadow-sm"
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
-              }`}
+              )}
             >
               {type === "all" ? "All" : type.charAt(0) + type.slice(1).toLowerCase()}
             </button>
@@ -81,14 +82,14 @@ export function ArchivePanel({ onOpenEntry }: ArchivePanelProps) {
         {entries.isLoading ? (
           <div className="space-y-3 mt-2">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="animate-pulse rounded-xl bg-muted h-16" />
+              <div key={i} className="animate-pulse rounded-xl bg-muted h-20" />
             ))}
           </div>
         ) : entries.data?.entries.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
-            <Archive className="h-10 w-10 text-muted-foreground/30 mb-3" />
+            <BookOpen className="h-10 w-10 text-muted-foreground/20 mb-3" />
             <p className="text-sm text-muted-foreground">
-              {search ? "No notes match your search" : "No notes yet"}
+              {search ? "No ideas match your search" : "No ideas yet"}
             </p>
           </div>
         ) : (
@@ -97,18 +98,18 @@ export function ArchivePanel({ onOpenEntry }: ArchivePanelProps) {
               <button
                 key={entry.id}
                 onClick={() => onOpenEntry(entry.id)}
-                className="w-full text-left rounded-xl border bg-card p-3 transition-all hover:bg-accent/50 active:scale-[0.98]"
+                className="w-full text-left rounded-xl border border-border/50 bg-card p-3.5 transition-all hover:bg-accent/50 active:scale-[0.98]"
               >
                 <div className="flex items-start justify-between gap-2">
                   <p className="font-medium text-sm line-clamp-1">{entry.title}</p>
-                  <span className="text-xs text-muted-foreground shrink-0">
+                  <span className="text-[11px] text-muted-foreground shrink-0">
                     {formatRelativeTime(entry.createdAt)}
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
                   {entry.summary ?? entry.content.slice(0, 120)}
                 </p>
-                <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                   {entry.type && (
                     <Badge
                       variant="secondary"
