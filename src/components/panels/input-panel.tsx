@@ -148,7 +148,7 @@ export function InputPanel({ onOpenSettings, onOpenEntry }: InputPanelProps) {
       <div className="flex items-center justify-between px-4 pt-10 pb-2 shrink-0">
         <div className="flex items-center gap-2">
           <Lightbulb className="h-5 w-5 text-primary" />
-          <h1 className="text-lg font-semibold">IdeaVista</h1>
+          <h1 className="text-lg font-semibold">Idea Catcher</h1>
         </div>
         <Button variant="ghost" size="icon" onClick={onOpenSettings}>
           <Settings className="h-4 w-4" />

@@ -62,7 +62,7 @@ export function DiscoverPanel({ onOpenEntry }: DiscoverPanelProps) {
     <div className="h-full overflow-y-auto px-4 pt-10 pb-4 space-y-4">
       <div className="flex items-center gap-2 animate-fade-in">
         <Compass className="h-5 w-5 text-primary" />
-        <h1 className="text-lg font-semibold">Discover</h1>
+        <h1 className="text-lg font-semibold">Discover Your Ideas</h1>
       </div>
 
       {/* Category Groups */}
