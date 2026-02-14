@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { PanelContainer } from "./panel-container";
 import { InputPanel } from "./input-panel";
+import { ArchivePanel } from "./archive-panel";
 import { DiscoverPanel } from "./discover-panel";
 import { EntryDetailSheet } from "./entry-detail-sheet";
 import { SettingsSheet } from "./settings-sheet";
@@ -20,6 +21,7 @@ export function PanelShell() {
             onOpenSettings={() => setSettingsOpen(true)}
           />
         }
+        archivePanel={<ArchivePanel onOpenEntry={setSelectedEntryId} />}
         discoverPanel={<DiscoverPanel onOpenEntry={setSelectedEntryId} />}
       />
 
