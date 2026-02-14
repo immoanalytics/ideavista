@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Compass, Sparkles } from "lucide-react";
+import { Compass, Sparkles, Layers } from "lucide-react";
 import { cn, formatRelativeTime, getEntryTypeColor } from "@/lib/utils";
 
 interface DiscoverPanelProps {
@@ -39,6 +39,7 @@ function getGradient(color: string | null): string {
 function CategoryChips({
   categories,
   selected,
+  totalCount,
   onSelect,
 }: {
   categories: Array<{
@@ -48,6 +49,7 @@ function CategoryChips({
     entryCount: number;
   }>;
   selected: string | null;
+  totalCount: number;
   onSelect: (id: string | null) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -61,50 +63,73 @@ function CategoryChips({
       <button
         onClick={() => onSelect(null)}
         className={cn(
-          "shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all",
+          "shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-1.5",
           !selected
             ? "bg-primary text-primary-foreground shadow-sm"
             : "bg-muted text-muted-foreground hover:bg-muted/80"
         )}
       >
         All
+        <span className={cn(
+          "text-[10px] tabular-nums",
+          !selected ? "text-primary-foreground/70" : "text-muted-foreground/60"
+        )}>
+          {totalCount}
+        </span>
       </button>
       {categories.map((cat) => (
         <button
           key={cat.id}
           onClick={() => onSelect(cat.id === selected ? null : cat.id)}
           className={cn(
-            "shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap",
+            "shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap flex items-center gap-1.5",
             selected === cat.id
               ? "bg-primary text-primary-foreground shadow-sm"
               : "bg-muted text-muted-foreground hover:bg-muted/80"
           )}
         >
           {cat.name}
+          <span className={cn(
+            "text-[10px] tabular-nums",
+            selected === cat.id ? "text-primary-foreground/70" : "text-muted-foreground/60"
+          )}>
+            {cat.entryCount}
+          </span>
         </button>
       ))}
     </div>
   );
 }
 
-/* ── Featured Card (first entry, hero size) ────────── */
+/* ── Image URL helper ─────────────────────────────── */
 
-function getImageUrl(entry: any): string | null {
+function getImageUrl(entry: any, size = "600x400"): string | null {
   if (entry.image) return entry.image;
   if (entry.imageKeyword) {
-    return `https://images.unsplash.com/photo-1?w=600&q=80&auto=format&fit=crop&fm=jpg&crop=entropy&cs=tinysrgb&s=${encodeURIComponent(entry.imageKeyword)}`;
+    return `https://source.unsplash.com/${size}/?${encodeURIComponent(entry.imageKeyword)}`;
   }
   return null;
 }
 
+/** Display title with fallback to truncated content */
+function displayTitle(entry: any): string {
+  if (entry.title) return entry.title;
+  const text = entry.summary ?? entry.content ?? "";
+  return text.slice(0, 60).trim() + (text.length > 60 ? "..." : "") || "Untitled";
+}
+
+/* ── Featured Card (hero size) ────────────────────── */
+
 function FeaturedCard({
   entry,
   onClick,
+  moreCount,
 }: {
   entry: any;
   onClick: () => void;
+  moreCount?: number;
 }) {
-  const imageUrl = getImageUrl(entry);
+  const imageUrl = getImageUrl(entry, "800x500");
   const hasImage = !!imageUrl;
   const gradient = getGradient(entry.categoryColor);
 
@@ -128,6 +153,11 @@ function FeaturedCard({
             loading="lazy"
           />
         )}
+        {!hasImage && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Sparkles className="h-10 w-10 text-white/20" />
+          </div>
+        )}
         {/* Dark overlay for text readability */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
 
@@ -145,9 +175,17 @@ function FeaturedCard({
             </span>
           )}
           <h3 className="text-white font-bold text-lg leading-tight line-clamp-2">
-            {entry.title}
+            {displayTitle(entry)}
           </h3>
         </div>
+
+        {/* "More in this category" badge */}
+        {moreCount != null && moreCount > 0 && (
+          <div className="absolute top-3 right-3 flex items-center gap-1 bg-black/50 backdrop-blur-sm text-white text-[11px] font-medium px-2 py-1 rounded-full">
+            <Layers className="h-3 w-3" />
+            +{moreCount} more
+          </div>
+        )}
       </div>
 
       {/* Body */}
@@ -179,14 +217,96 @@ function FeaturedCard({
   );
 }
 
-/* ── Compact Card (remaining entries) ──────────────── */
+/* ── Wide Card (alternates with compact for visual variety) */
+
+function WideCard({
+  entry,
+  onClick,
+  moreCount,
+}: {
+  entry: any;
+  onClick: () => void;
+  moreCount?: number;
+}) {
+  const imageUrl = getImageUrl(entry, "600x300");
+  const hasImage = !!imageUrl;
+  const gradient = getGradient(entry.categoryColor);
+
+  return (
+    <button
+      onClick={onClick}
+      className="w-full text-left rounded-xl overflow-hidden shadow-sm border border-border/50 bg-card transition-all duration-200 active:scale-[0.98] hover:shadow-md"
+    >
+      {/* Wide image banner */}
+      <div
+        className={cn(
+          "relative w-full aspect-[21/9] overflow-hidden",
+          !hasImage && `bg-gradient-to-br ${gradient}`
+        )}
+      >
+        {hasImage ? (
+          <img
+            src={imageUrl}
+            alt=""
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <Sparkles className="h-6 w-6 text-white/30" />
+          </div>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+        {entry.categoryName && (
+          <span
+            className="absolute bottom-2 left-3 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wide"
+            style={{
+              backgroundColor: entry.categoryColor ?? "#6B7280",
+              color: "#fff",
+            }}
+          >
+            {entry.categoryName}
+          </span>
+        )}
+        {moreCount != null && moreCount > 0 && (
+          <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/50 backdrop-blur-sm text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full">
+            <Layers className="h-2.5 w-2.5" />
+            +{moreCount}
+          </div>
+        )}
+      </div>
+      <div className="p-3">
+        <h4 className="font-semibold text-sm leading-tight line-clamp-1">
+          {displayTitle(entry)}
+        </h4>
+        <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
+          {entry.summary ?? entry.content}
+        </p>
+        <div className="flex items-center gap-1.5 mt-2">
+          {entry.tags?.slice(0, 3).map((tag: string) => (
+            <Badge key={tag} variant="outline" className="text-[10px] h-4">
+              {tag}
+            </Badge>
+          ))}
+          <span className="text-[10px] text-muted-foreground ml-auto">
+            {formatRelativeTime(entry.createdAt)}
+          </span>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+/* ── Compact Card (horizontal thumbnail + text) ──── */
 
 function CompactCard({
   entry,
   onClick,
+  moreCount,
 }: {
   entry: any;
   onClick: () => void;
+  moreCount?: number;
 }) {
   const imageUrl = getImageUrl(entry);
   const hasImage = !!imageUrl;
@@ -213,7 +333,13 @@ function CompactCard({
           />
         ) : (
           <div className="flex items-center justify-center h-full">
-            <Sparkles className="h-5 w-5 text-white/60" />
+            <Sparkles className="h-5 w-5 text-white/30" />
+          </div>
+        )}
+        {moreCount != null && moreCount > 0 && (
+          <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 bg-black/50 backdrop-blur-sm text-white text-[9px] font-medium px-1.5 py-0.5 rounded-full">
+            <Layers className="h-2.5 w-2.5" />
+            +{moreCount}
           </div>
         )}
       </div>
@@ -232,7 +358,7 @@ function CompactCard({
           </span>
         )}
         <h4 className="font-semibold text-sm leading-tight line-clamp-2">
-          {entry.title}
+          {displayTitle(entry)}
         </h4>
         <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed flex-1">
           {entry.summary ?? entry.content}
@@ -311,8 +437,17 @@ export function DiscoverPanel({ onOpenEntry }: DiscoverPanelProps) {
   const data = feed.data;
   const entries = data?.entries ?? [];
   const categories = data?.categories ?? [];
-  const featured = entries[0];
-  const rest = entries.slice(1);
+  const totalCount = data?.totalCount ?? entries.length;
+
+  // In "All" view, entries are already deduplicated by category from the backend.
+  // Pick the entry with the most tags as the featured card.
+  const sortedByRichness = [...entries].sort(
+    (a, b) => (b.tags?.length ?? 0) - (a.tags?.length ?? 0)
+  );
+  const featured = sortedByRichness[0];
+  const rest = featured
+    ? entries.filter((e) => e.id !== featured.id)
+    : [];
 
   return (
     <div className="h-full overflow-y-auto pt-10 pb-4">
@@ -328,6 +463,7 @@ export function DiscoverPanel({ onOpenEntry }: DiscoverPanelProps) {
           <CategoryChips
             categories={categories}
             selected={selectedCategory}
+            totalCount={totalCount}
             onSelect={setSelectedCategory}
           />
         </div>
@@ -338,26 +474,37 @@ export function DiscoverPanel({ onOpenEntry }: DiscoverPanelProps) {
         <div className="text-center py-16 text-muted-foreground px-4">
           <Compass className="h-12 w-12 mx-auto mb-4 opacity-20" />
           <p className="text-lg font-medium">No discoveries yet</p>
-          <p className="text-sm mt-1">Swipe left to catch your first idea</p>
+          <p className="text-sm mt-1">Swipe right to catch your first idea</p>
         </div>
       ) : (
         <div className="px-4 space-y-4 pb-8">
-          {/* Hero card */}
+          {/* Hero card — most "rich" entry */}
           {featured && (
             <FeaturedCard
               entry={featured}
               onClick={() => onOpenEntry(featured.id)}
+              moreCount={featured.moreInCategory}
             />
           )}
 
-          {/* Compact list */}
-          {rest.map((entry) => (
-            <CompactCard
-              key={entry.id}
-              entry={entry}
-              onClick={() => onOpenEntry(entry.id)}
-            />
-          ))}
+          {/* Mixed layout: alternate wide and compact for variety */}
+          {rest.map((entry, i) =>
+            i % 3 === 1 ? (
+              <WideCard
+                key={entry.id}
+                entry={entry}
+                onClick={() => onOpenEntry(entry.id)}
+                moreCount={entry.moreInCategory}
+              />
+            ) : (
+              <CompactCard
+                key={entry.id}
+                entry={entry}
+                onClick={() => onOpenEntry(entry.id)}
+                moreCount={entry.moreInCategory}
+              />
+            )
+          )}
         </div>
       )}
     </div>
