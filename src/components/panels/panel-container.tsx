@@ -11,10 +11,10 @@ interface PanelContainerProps {
 }
 
 const PANEL_COUNT = 3;
-const PANEL_LABELS = ["Idea Book", "Idea Catcher", "Discover Your Ideas"];
+const PANEL_LABELS = ["Idea Catcher", "Idea Book", "Discover Your Ideas"];
 
 export function PanelContainer({ inputPanel, archivePanel, discoverPanel }: PanelContainerProps) {
-  const [activePanel, setActivePanel] = useState(1);
+  const [activePanel, setActivePanel] = useState(0);
   const [swiping, setSwiping] = useState(false);
   const [deltaX, setDeltaX] = useState(0);
   const [isDesktop, setIsDesktop] = useState(false);
@@ -98,8 +98,8 @@ export function PanelContainer({ inputPanel, archivePanel, discoverPanel }: Pane
           width: `${PANEL_COUNT * 100}%`,
         }}
       >
-        <div style={{ width: `${100 / PANEL_COUNT}%` }} className="h-full overflow-hidden">{archivePanel}</div>
         <div style={{ width: `${100 / PANEL_COUNT}%` }} className="h-full overflow-hidden">{inputPanel}</div>
+        <div style={{ width: `${100 / PANEL_COUNT}%` }} className="h-full overflow-hidden">{archivePanel}</div>
         <div style={{ width: `${100 / PANEL_COUNT}%` }} className="h-full overflow-hidden">{discoverPanel}</div>
       </div>
     </div>
