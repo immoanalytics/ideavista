@@ -92,7 +92,7 @@ export function InputPanel({ onOpenSettings }: InputPanelProps) {
 
         {/* Input bar */}
         <div className="w-full max-w-md">
-          <div className="relative">
+          <div className="relative flex items-end rounded-2xl border border-border/60 bg-card shadow-sm focus-within:ring-2 focus-within:ring-primary/40 focus-within:border-primary/40">
             <textarea
               ref={textareaRef}
               value={content}
@@ -100,12 +100,12 @@ export function InputPanel({ onOpenSettings }: InputPanelProps) {
               onKeyDown={handleKeyDown}
               placeholder="What's on your mind?"
               rows={1}
-              className="w-full resize-none rounded-2xl border border-border/60 bg-card px-4 py-3 pr-12 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 placeholder:text-muted-foreground/60"
+              className="flex-1 resize-none bg-transparent px-4 py-3 pr-2 text-sm focus:outline-none placeholder:text-muted-foreground/60"
               style={{ maxHeight: 120 }}
             />
             <Button
               size="icon"
-              className="rounded-full h-8 w-8 absolute right-2 bottom-2 transition-all duration-200 active:scale-90"
+              className="rounded-full h-8 w-8 m-1.5 shrink-0 transition-all duration-200 active:scale-90"
               onClick={handleSubmit}
               disabled={!content.trim() || createEntry.isPending}
             >
