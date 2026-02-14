@@ -55,7 +55,7 @@ async function processEntryPipeline(
     }
 
     try {
-      await generateEmbedding(config, entry);
+      await generateEmbedding(config, entry, db);
       const similar = await findSimilarEntries(db, entry.id, userId);
       if (similar.length > 0) {
         await detectRelationships(config, db, entry, similar);
