@@ -24,14 +24,6 @@ export function InputPanel({ onOpenSettings }: InputPanelProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const utils = trpc.useUtils();
 
-  // Auto-focus on mount so keyboard opens immediately
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      textareaRef.current?.focus();
-    }, 400);
-    return () => clearTimeout(timer);
-  }, []);
-
   const createEntry = trpc.entry.create.useMutation({
     onSuccess: () => {
       setSaved(true);
@@ -81,14 +73,19 @@ export function InputPanel({ onOpenSettings }: InputPanelProps) {
 
       {/* Main content — positioned in upper-center like Perplexity */}
       <div className="flex-1 flex flex-col items-center justify-start px-6 pt-[18vh]">
-        {/* Brand */}
-        <div className="flex items-center gap-2.5 mb-2">
-          <Sparkles className="h-7 w-7 text-primary" />
-          <h1 className="text-3xl font-bold tracking-tight">IdeaVista</h1>
+        {/* Brand — tapping anywhere here focuses the input (opens keyboard on mobile) */}
+        <div
+          className="flex flex-col items-center cursor-text"
+          onClick={() => textareaRef.current?.focus()}
+        >
+          <div className="flex items-center gap-2.5 mb-2">
+            <Sparkles className="h-7 w-7 text-primary" />
+            <h1 className="text-3xl font-bold tracking-tight">IdeaVista</h1>
+          </div>
+          <p className="text-sm text-muted-foreground text-center mb-8">
+            Capture anything. Discover everything.
+          </p>
         </div>
-        <p className="text-sm text-muted-foreground text-center mb-8">
-          Capture anything. Discover everything.
-        </p>
 
         {/* Input bar */}
         <div className="w-full max-w-md">
@@ -99,6 +96,7 @@ export function InputPanel({ onOpenSettings }: InputPanelProps) {
               onChange={(e) => setContent(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="What's on your mind?"
+              autoFocus
               rows={1}
               className="flex-1 resize-none bg-transparent px-4 py-3 pr-2 text-sm focus:outline-none placeholder:text-muted-foreground/60"
               style={{ maxHeight: 120 }}
