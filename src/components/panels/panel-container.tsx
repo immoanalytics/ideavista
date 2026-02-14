@@ -66,9 +66,12 @@ export function PanelContainer({ inputPanel, archivePanel, discoverPanel }: Pane
   }
 
   // Mobile: swipeable 3 panels
-  const translateX = swiping
-    ? -activePanel * 100 + (deltaX / (typeof window !== "undefined" ? window.innerWidth : 1)) * 100
-    : -activePanel * 100;
+  // Use pixel values for translateX to avoid CSS percentage pitfalls
+  // (translateX(%) is relative to the element's own width, not the viewport)
+  const windowWidth = typeof window !== "undefined" ? window.innerWidth : 0;
+  const translatePx = swiping
+    ? -activePanel * windowWidth + deltaX
+    : -activePanel * windowWidth;
 
   return (
     <div className="h-dvh overflow-hidden" {...handlers}>
@@ -90,7 +93,7 @@ export function PanelContainer({ inputPanel, archivePanel, discoverPanel }: Pane
       <div
         className="flex h-full"
         style={{
-          transform: `translateX(${translateX}%)`,
+          transform: `translateX(${translatePx}px)`,
           transition: swiping ? "none" : "transform 300ms cubic-bezier(0.4, 0, 0.2, 1)",
           width: `${PANEL_COUNT * 100}%`,
         }}
