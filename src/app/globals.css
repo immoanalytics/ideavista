@@ -134,3 +134,12 @@ body {
 .skeleton-smooth {
   animation: skeleton-pulse 1.5s ease-in-out infinite;
 }
+
+/* Hide scrollbar but keep scrolling */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

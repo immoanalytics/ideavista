@@ -3,7 +3,8 @@ export const CATEGORIZE_PROMPT = `Analyze the following entry and classify it. R
 - categoryName: A short category name (e.g., "Technology", "Travel", "Health", "Finance", "Creative", "Work", "Personal")
 - categoryColor: A hex color for the category (e.g., "#8B5CF6")
 - tags: An array of 1-5 relevant tags (short, lowercase words)
-- summary: A 1-2 sentence summary of the entry
+- summary: A well-structured 2-3 sentence summary that captures the key insight or purpose of the entry. Write it in an engaging, editorial tone suitable for a discovery feed.
+- imageKeyword: A single English keyword (noun) that best represents the visual theme of this entry, suitable for searching stock photography (e.g., "mountain", "laptop", "cooking", "airplane", "notebook")
 
 Entry title: {title}
 Entry content: {content}`;

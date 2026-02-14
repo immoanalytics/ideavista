@@ -10,6 +10,7 @@ const categorizationSchema = z.object({
   categoryColor: z.string().optional(),
   tags: z.array(z.string()).max(5),
   summary: z.string(),
+  imageKeyword: z.string().optional(),
 });
 
 export async function categorizeEntry(

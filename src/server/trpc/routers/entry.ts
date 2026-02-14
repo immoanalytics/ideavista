@@ -30,12 +30,29 @@ async function processEntryPipeline(
       categoryId = category.id;
     }
 
+    // Merge imageKeyword into existing metadata
+    const existing = await db.entry.findUnique({
+      where: { id: entry.id },
+      select: { metadata: true },
+    });
+    const prevMeta = (existing?.metadata as any) ?? {};
+    const updatedMeta = {
+      ...prevMeta,
+      ...(categorization.imageKeyword
+        ? { imageKeyword: categorization.imageKeyword }
+        : {}),
+    };
+
     await db.entry.update({
       where: { id: entry.id },
       data: {
         type: categorization.type as any,
         summary: categorization.summary,
         aiCategoryId: categoryId,
+        metadata:
+          Object.keys(updatedMeta).length > 0
+            ? JSON.parse(JSON.stringify(updatedMeta))
+            : undefined,
       },
     });
 
