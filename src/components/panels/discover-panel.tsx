@@ -84,7 +84,7 @@ export function DiscoverPanel({ onOpenEntry }: DiscoverPanelProps) {
           </CardHeader>
           <CardContent className="pb-3">
             <div className="flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory" style={{ touchAction: "pan-x" }}>
-              {category.entries.map((entry) => (
+              {category.entries.map((entry: any) => (
                 <button
                   key={entry.id}
                   onClick={() => onOpenEntry(entry.id)}
