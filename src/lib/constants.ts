@@ -36,7 +36,7 @@ export const AI_PROVIDERS = [
       "gemini-1.5-pro",
       "gemini-1.5-flash",
     ],
-    embedModels: ["text-embedding-005"],
+    embedModels: ["gemini-embedding-001"],
   },
 ] as const;
 
