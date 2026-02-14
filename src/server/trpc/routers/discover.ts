@@ -23,13 +23,16 @@ export const discoverRouter = createRouter({
       console.warn("Failed to load categories:", e);
     }
 
-    // All recent entries (fallback for uncategorized)
-    const uncategorized = await ctx.db.entry.findMany({
-      where: { userId: ctx.userId, aiCategoryId: null },
+    // All recent entries (always shown)
+    const recentEntries = await ctx.db.entry.findMany({
+      where: { userId: ctx.userId },
       include: { tags: { include: { tag: true } } },
       orderBy: { createdAt: "desc" },
       take: 20,
     });
+
+    // Uncategorized entries
+    const uncategorized = recentEntries.filter((e) => !e.aiCategoryId);
 
     // Top tags
     let topTags: any[] = [];
@@ -102,6 +105,15 @@ export const discoverRouter = createRouter({
         summary: e.summary,
         type: e.type,
         metadata: e.metadata,
+        createdAt: e.createdAt,
+      })),
+      recentEntries: recentEntries.map((e) => ({
+        id: e.id,
+        title: e.title,
+        content: e.content.slice(0, 200),
+        summary: e.summary,
+        type: e.type,
+        tags: e.tags.map((t) => t.tag.name),
         createdAt: e.createdAt,
       })),
     };

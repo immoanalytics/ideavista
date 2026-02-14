@@ -55,7 +55,8 @@ export function DiscoverPanel({ onOpenEntry }: DiscoverPanelProps) {
   const hasContent =
     (data?.categories?.length ?? 0) > 0 ||
     (data?.richEntries?.length ?? 0) > 0 ||
-    (data?.uncategorized?.length ?? 0) > 0;
+    (data?.uncategorized?.length ?? 0) > 0 ||
+    (data?.recentEntries?.length ?? 0) > 0;
 
   return (
     <div className="h-full overflow-y-auto px-4 pt-10 pb-4 space-y-4">
@@ -194,6 +195,43 @@ export function DiscoverPanel({ onOpenEntry }: DiscoverPanelProps) {
                 </Badge>
               ))}
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* All recent entries (guaranteed fallback) */}
+      {data?.recentEntries && data.recentEntries.length > 0 && (
+        <Card className="animate-fade-in-up" style={{ animationDelay: "200ms" }}>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">All entries</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1 pb-3">
+            {data.recentEntries.map((entry: any) => (
+              <button
+                key={entry.id}
+                onClick={() => onOpenEntry(entry.id)}
+                className="w-full text-left p-2 rounded-lg hover:bg-muted/50 transition-all duration-200 active:scale-[0.98]"
+              >
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium truncate flex-1">{entry.title}</p>
+                  {entry.type && (
+                    <Badge
+                      variant="secondary"
+                      className="text-[10px] h-4 shrink-0"
+                      style={{ color: getEntryTypeColor(entry.type) }}
+                    >
+                      {entry.type.charAt(0) + entry.type.slice(1).toLowerCase()}
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground truncate">
+                  {entry.summary ?? entry.content}
+                </p>
+                <span className="text-[10px] text-muted-foreground">
+                  {formatRelativeTime(entry.createdAt)}
+                </span>
+              </button>
+            ))}
           </CardContent>
         </Card>
       )}
