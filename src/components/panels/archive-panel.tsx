@@ -30,7 +30,7 @@ export function ArchivePanel({ onOpenEntry }: ArchivePanelProps) {
       <div className="px-4 pt-10 pb-3 shrink-0">
         <div className="flex items-center gap-2 mb-3">
           <Archive className="h-5 w-5 text-primary" />
-          <h1 className="text-lg font-semibold">Archive</h1>
+          <h1 className="text-lg font-semibold">Idea Book</h1>
           {stats.data && (
             <span className="text-xs text-muted-foreground ml-auto">
               {stats.data.total} notes

@@ -21,7 +21,7 @@ export function DiscoverPanel({ onOpenEntry }: DiscoverPanelProps) {
       <div className="h-full overflow-y-auto px-4 pt-10 pb-4 space-y-4">
         <div className="flex items-center gap-2">
           <Compass className="h-5 w-5 text-primary" />
-          <h1 className="text-lg font-semibold">Discover</h1>
+          <h1 className="text-lg font-semibold">Discover Your Ideas</h1>
         </div>
         {Array.from({ length: 4 }).map((_, i) => (
           <Skeleton key={i} className="h-40 w-full rounded-xl skeleton-smooth" style={{ animationDelay: `${i * 150}ms` }} />
@@ -35,7 +35,7 @@ export function DiscoverPanel({ onOpenEntry }: DiscoverPanelProps) {
       <div className="h-full overflow-y-auto px-4 pt-10 pb-4 space-y-4">
         <div className="flex items-center gap-2">
           <Compass className="h-5 w-5 text-primary" />
-          <h1 className="text-lg font-semibold">Discover</h1>
+          <h1 className="text-lg font-semibold">Discover Your Ideas</h1>
         </div>
         <div className="text-center py-16 text-muted-foreground">
           <Compass className="h-12 w-12 mx-auto mb-4 opacity-20" />
@@ -241,7 +241,7 @@ export function DiscoverPanel({ onOpenEntry }: DiscoverPanelProps) {
         <div className="text-center py-16 text-muted-foreground">
           <Compass className="h-12 w-12 mx-auto mb-4 opacity-20 animate-fade-in-up" />
           <p className="text-lg font-medium animate-fade-in-up stagger-1">No discoveries yet</p>
-          <p className="text-sm mt-1 animate-fade-in-up stagger-2">Swipe left to add your first thought</p>
+          <p className="text-sm mt-1 animate-fade-in-up stagger-2">Swipe right to catch your first idea</p>
         </div>
       )}
     </div>
