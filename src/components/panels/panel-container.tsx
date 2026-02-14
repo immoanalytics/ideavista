@@ -48,7 +48,7 @@ export function PanelContainer({ inputPanel, discoverPanel }: PanelContainerProp
     trackMouse: false,
     trackTouch: true,
     delta: 50,
-    preventScrollOnSwipe: false,
+    preventScrollOnSwipe: true,
   });
 
   // Desktop: side by side

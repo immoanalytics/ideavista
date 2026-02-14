@@ -106,9 +106,9 @@ export function InputPanel({ onOpenSettings, onOpenEntry }: InputPanelProps) {
   // Empty state: centered layout
   if (isEmpty) {
     return (
-      <div className="flex flex-col h-full bg-background">
+      <div className="flex flex-col h-dvh bg-background">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 pt-10 pb-2">
+        <div className="flex items-center justify-between px-4 pt-10 pb-2 shrink-0">
           <div className="flex items-center gap-2">
             <Lightbulb className="h-5 w-5 text-primary" />
             <h1 className="text-lg font-semibold">IdeaVista</h1>
@@ -143,9 +143,9 @@ export function InputPanel({ onOpenSettings, onOpenEntry }: InputPanelProps) {
 
   // Has entries: bottom-anchored layout
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-dvh bg-background">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 pt-10 pb-2">
+      <div className="flex items-center justify-between px-4 pt-10 pb-2 shrink-0">
         <div className="flex items-center gap-2">
           <Lightbulb className="h-5 w-5 text-primary" />
           <h1 className="text-lg font-semibold">IdeaVista</h1>
@@ -156,7 +156,7 @@ export function InputPanel({ onOpenSettings, onOpenEntry }: InputPanelProps) {
       </div>
 
       {/* Entry feed (chat bubbles) — newest at bottom */}
-      <div className="flex-1 overflow-y-auto px-4 pb-2 flex flex-col-reverse gap-2">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-2 flex flex-col-reverse gap-2">
         {/* Pending optimistic bubble */}
         {pendingContent && (
           <div className="flex justify-end animate-fade-in-up">
@@ -229,7 +229,7 @@ export function InputPanel({ onOpenSettings, onOpenEntry }: InputPanelProps) {
 
       {/* Input area — bottom */}
       <div
-        className="border-t bg-background px-4 py-3 animate-fade-in"
+        className="border-t bg-background px-4 py-3 shrink-0 animate-fade-in"
         style={{
           paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))",
         }}
