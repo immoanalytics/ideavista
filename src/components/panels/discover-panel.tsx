@@ -12,7 +12,9 @@ interface DiscoverPanelProps {
 }
 
 export function DiscoverPanel({ onOpenEntry }: DiscoverPanelProps) {
-  const feed = trpc.discover.feed.useQuery();
+  const feed = trpc.discover.feed.useQuery(undefined, {
+    retry: 2,
+  });
 
   if (feed.isLoading) {
     return (
@@ -24,6 +26,27 @@ export function DiscoverPanel({ onOpenEntry }: DiscoverPanelProps) {
         {Array.from({ length: 4 }).map((_, i) => (
           <Skeleton key={i} className="h-40 w-full rounded-xl skeleton-smooth" style={{ animationDelay: `${i * 150}ms` }} />
         ))}
+      </div>
+    );
+  }
+
+  if (feed.isError) {
+    return (
+      <div className="h-full overflow-y-auto px-4 pt-10 pb-4 space-y-4">
+        <div className="flex items-center gap-2">
+          <Compass className="h-5 w-5 text-primary" />
+          <h1 className="text-lg font-semibold">Discover</h1>
+        </div>
+        <div className="text-center py-16 text-muted-foreground">
+          <Compass className="h-12 w-12 mx-auto mb-4 opacity-20" />
+          <p className="text-sm">Could not load discoveries</p>
+          <button
+            onClick={() => feed.refetch()}
+            className="text-sm text-primary mt-2 underline"
+          >
+            Try again
+          </button>
+        </div>
       </div>
     );
   }
