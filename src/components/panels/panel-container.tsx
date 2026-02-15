@@ -11,7 +11,7 @@ interface PanelContainerProps {
 }
 
 const PANEL_COUNT = 3;
-const PANEL_LABELS = ["Idea Catcher", "Idea Book", "Discover Your Ideas"];
+const PANEL_LABELS = ["Idea Catcher", "Idea Book", "Digital Dashboard"];
 
 export function PanelContainer({ inputPanel, archivePanel, discoverPanel }: PanelContainerProps) {
   const [activePanel, setActivePanel] = useState(0);

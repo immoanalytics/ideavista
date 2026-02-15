@@ -1,412 +1,188 @@
 "use client";
 
-import { useState, useRef } from "react";
 import { trpc } from "@/lib/trpc";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Compass, Sparkles, Layers } from "lucide-react";
-import { cn, formatRelativeTime, getEntryTypeColor } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { Plane, Film, BookOpen, MoreHorizontal, FolderOpen, ChevronDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface DiscoverPanelProps {
   onOpenEntry: (id: string) => void;
 }
 
-// Gradient backgrounds for entries without OG images
-const GRADIENT_PALETTES: Record<string, string> = {
-  "#8B5CF6": "from-violet-600/80 to-indigo-900/90",
-  "#F59E0B": "from-amber-500/80 to-orange-800/90",
-  "#10B981": "from-emerald-500/80 to-teal-900/90",
-  "#3B82F6": "from-blue-500/80 to-sky-900/90",
-  "#EC4899": "from-pink-500/80 to-rose-900/90",
-  "#F97316": "from-orange-500/80 to-red-900/90",
-  "#6B7280": "from-gray-500/80 to-slate-800/90",
-  "#06B6D4": "from-cyan-500/80 to-blue-900/90",
-  "#EF4444": "from-red-500/80 to-rose-900/90",
+/* ── Category config ──────────────────────────────── */
+
+const CATEGORY_META: Record<
+  string,
+  { icon: React.ElementType; gradient: string; accent: string }
+> = {
+  Trips: {
+    icon: Plane,
+    gradient: "from-emerald-500/20 to-teal-600/10",
+    accent: "text-emerald-400",
+  },
+  Entertainment: {
+    icon: Film,
+    gradient: "from-violet-500/20 to-purple-600/10",
+    accent: "text-violet-400",
+  },
+  "To Read": {
+    icon: BookOpen,
+    gradient: "from-blue-500/20 to-sky-600/10",
+    accent: "text-blue-400",
+  },
+  Other: {
+    icon: MoreHorizontal,
+    gradient: "from-gray-500/20 to-slate-600/10",
+    accent: "text-gray-400",
+  },
 };
 
-function getGradient(color: string | null): string {
-  if (color && GRADIENT_PALETTES[color]) return GRADIENT_PALETTES[color];
-  const keys = Object.keys(GRADIENT_PALETTES);
-  const idx = color
-    ? Math.abs(color.split("").reduce((a, c) => a + c.charCodeAt(0), 0)) %
-      keys.length
-    : 0;
-  return GRADIENT_PALETTES[keys[idx]];
-}
-
-/* ── Category Chip Bar ─────────────────────────────── */
-
-function CategoryChips({
-  categories,
-  selected,
-  totalCount,
-  onSelect,
-}: {
-  categories: Array<{
-    id: string;
-    name: string;
-    color: string | null;
-    entryCount: number;
-  }>;
-  selected: string | null;
-  totalCount: number;
-  onSelect: (id: string | null) => void;
-}) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-
+function getCategoryMeta(name: string) {
   return (
-    <div
-      ref={scrollRef}
-      className="flex gap-2 overflow-x-auto pb-1 px-4 no-scrollbar"
-      style={{ touchAction: "pan-x", WebkitOverflowScrolling: "touch" }}
-    >
-      <button
-        onClick={() => onSelect(null)}
-        className={cn(
-          "shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-1.5",
-          !selected
-            ? "bg-primary text-primary-foreground shadow-sm"
-            : "bg-muted text-muted-foreground hover:bg-muted/80"
-        )}
-      >
-        All
-        <span className={cn(
-          "text-[10px] tabular-nums",
-          !selected ? "text-primary-foreground/70" : "text-muted-foreground/60"
-        )}>
-          {totalCount}
-        </span>
-      </button>
-      {categories.map((cat) => (
-        <button
-          key={cat.id}
-          onClick={() => onSelect(cat.id === selected ? null : cat.id)}
-          className={cn(
-            "shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap flex items-center gap-1.5",
-            selected === cat.id
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "bg-muted text-muted-foreground hover:bg-muted/80"
-          )}
-        >
-          {cat.name}
-          <span className={cn(
-            "text-[10px] tabular-nums",
-            selected === cat.id ? "text-primary-foreground/70" : "text-muted-foreground/60"
-          )}>
-            {cat.entryCount}
-          </span>
-        </button>
-      ))}
-    </div>
+    CATEGORY_META[name] ?? {
+      icon: MoreHorizontal,
+      gradient: "from-gray-500/20 to-slate-600/10",
+      accent: "text-gray-400",
+    }
   );
 }
 
-/* ── Image URL helper ─────────────────────────────── */
-
-function getImageUrl(entry: any, size = "600x400"): string | null {
-  if (entry.image) return entry.image;
-  if (entry.imageKeyword) {
-    return `https://source.unsplash.com/${size}/?${encodeURIComponent(entry.imageKeyword)}`;
-  }
-  return null;
+/** Format date as DD/MM */
+function shortDate(d: Date | string): string {
+  const date = new Date(d);
+  return `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
-/** Display title with fallback to truncated content */
-function displayTitle(entry: any): string {
+/** Derive a short "item" label from the entry */
+function itemLabel(entry: any): string {
   if (entry.title) return entry.title;
   const text = entry.summary ?? entry.content ?? "";
-  return text.slice(0, 60).trim() + (text.length > 60 ? "..." : "") || "Untitled";
+  return text.slice(0, 50).trim() + (text.length > 50 ? "…" : "") || "Untitled";
 }
 
-/* ── Featured Card (hero size) ────────────────────── */
+/* ── Category Section (full viewport height) ──────── */
 
-function FeaturedCard({
-  entry,
-  onClick,
-  moreCount,
+function CategorySection({
+  name,
+  entries,
+  onOpenEntry,
+  isLast,
 }: {
-  entry: any;
-  onClick: () => void;
-  moreCount?: number;
+  name: string;
+  entries: any[];
+  onOpenEntry: (id: string) => void;
+  isLast: boolean;
 }) {
-  const imageUrl = getImageUrl(entry, "800x500");
-  const hasImage = !!imageUrl;
-  const gradient = getGradient(entry.categoryColor);
+  const meta = getCategoryMeta(name);
+  const Icon = meta.icon;
 
   return (
-    <button
-      onClick={onClick}
-      className="w-full text-left rounded-2xl overflow-hidden shadow-sm transition-all duration-200 active:scale-[0.98] hover:shadow-md"
+    <section
+      className={cn(
+        "min-h-[100dvh] snap-start flex flex-col px-4 pt-12 pb-6",
+        `bg-gradient-to-b ${meta.gradient}`
+      )}
     >
-      {/* Hero area */}
-      <div
-        className={cn(
-          "relative w-full aspect-[16/10] overflow-hidden",
-          !hasImage && `bg-gradient-to-br ${gradient}`
-        )}
-      >
-        {hasImage && (
-          <img
-            src={imageUrl}
-            alt=""
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
-        )}
-        {!hasImage && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Sparkles className="h-10 w-10 text-white/20" />
-          </div>
-        )}
-        {/* Dark overlay for text readability */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-
-        {/* Title over image */}
-        <div className="absolute bottom-0 left-0 right-0 p-4">
-          {entry.categoryName && (
-            <span
-              className="inline-block px-2 py-0.5 rounded-md text-[11px] font-semibold uppercase tracking-wide mb-2"
-              style={{
-                backgroundColor: entry.categoryColor ?? "#6B7280",
-                color: "#fff",
-              }}
-            >
-              {entry.categoryName}
-            </span>
+      {/* Section header */}
+      <div className="flex items-center gap-2.5 mb-4">
+        <div
+          className={cn(
+            "flex items-center justify-center h-8 w-8 rounded-lg bg-card/60 backdrop-blur-sm border border-border/40",
+            meta.accent
           )}
-          <h3 className="text-white font-bold text-lg leading-tight line-clamp-2">
-            {displayTitle(entry)}
-          </h3>
+        >
+          <Icon className="h-4 w-4" />
         </div>
+        <h2 className="text-lg font-bold tracking-tight">{name}</h2>
+        <Badge variant="secondary" className="text-[10px] h-5 ml-1">
+          {entries.length}
+        </Badge>
+      </div>
 
-        {/* "More in this category" badge */}
-        {moreCount != null && moreCount > 0 && (
-          <div className="absolute top-3 right-3 flex items-center gap-1 bg-black/50 backdrop-blur-sm text-white text-[11px] font-medium px-2 py-1 rounded-full">
-            <Layers className="h-3 w-3" />
-            +{moreCount} more
+      {/* Table */}
+      <div className="flex-1">
+        {entries.length === 0 ? (
+          <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
+            No entries yet
           </div>
-        )}
-      </div>
-
-      {/* Body */}
-      <div className="bg-card p-4 border border-t-0 border-border/50 rounded-b-2xl">
-        <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">
-          {entry.summary ?? entry.content}
-        </p>
-        <div className="flex items-center gap-2 mt-3 flex-wrap">
-          {entry.type && (
-            <Badge
-              variant="secondary"
-              className="text-xs h-5"
-              style={{ color: getEntryTypeColor(entry.type) }}
-            >
-              {entry.type.charAt(0) + entry.type.slice(1).toLowerCase()}
-            </Badge>
-          )}
-          {entry.tags?.slice(0, 3).map((tag: string) => (
-            <Badge key={tag} variant="outline" className="text-xs h-5">
-              {tag}
-            </Badge>
-          ))}
-          <span className="text-xs text-muted-foreground ml-auto">
-            {formatRelativeTime(entry.createdAt)}
-          </span>
-        </div>
-      </div>
-    </button>
-  );
-}
-
-/* ── Wide Card (alternates with compact for visual variety) */
-
-function WideCard({
-  entry,
-  onClick,
-  moreCount,
-}: {
-  entry: any;
-  onClick: () => void;
-  moreCount?: number;
-}) {
-  const imageUrl = getImageUrl(entry, "600x300");
-  const hasImage = !!imageUrl;
-  const gradient = getGradient(entry.categoryColor);
-
-  return (
-    <button
-      onClick={onClick}
-      className="w-full text-left rounded-xl overflow-hidden shadow-sm border border-border/50 bg-card transition-all duration-200 active:scale-[0.98] hover:shadow-md"
-    >
-      {/* Wide image banner */}
-      <div
-        className={cn(
-          "relative w-full aspect-[21/9] overflow-hidden",
-          !hasImage && `bg-gradient-to-br ${gradient}`
-        )}
-      >
-        {hasImage ? (
-          <img
-            src={imageUrl}
-            alt=""
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
         ) : (
-          <div className="flex items-center justify-center h-full">
-            <Sparkles className="h-6 w-6 text-white/30" />
-          </div>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-        {entry.categoryName && (
-          <span
-            className="absolute bottom-2 left-3 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wide"
-            style={{
-              backgroundColor: entry.categoryColor ?? "#6B7280",
-              color: "#fff",
-            }}
-          >
-            {entry.categoryName}
-          </span>
-        )}
-        {moreCount != null && moreCount > 0 && (
-          <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/50 backdrop-blur-sm text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full">
-            <Layers className="h-2.5 w-2.5" />
-            +{moreCount}
+          <div className="rounded-xl border border-border/50 bg-card/80 backdrop-blur-sm overflow-hidden">
+            {/* Table header */}
+            <div className="grid grid-cols-[50px_1fr_1fr] gap-2 px-3 py-2 border-b border-border/40 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <span>Date</span>
+              <span>Item</span>
+              <span>Context</span>
+            </div>
+
+            {/* Rows */}
+            {entries.map((entry, i) => (
+              <button
+                key={entry.id}
+                onClick={() => onOpenEntry(entry.id)}
+                className={cn(
+                  "w-full text-left grid grid-cols-[50px_1fr_1fr] gap-2 px-3 py-2.5 transition-colors hover:bg-muted/40 active:bg-muted/60",
+                  i < entries.length - 1 && "border-b border-border/20"
+                )}
+              >
+                <span className="text-[11px] text-muted-foreground tabular-nums pt-0.5">
+                  {shortDate(entry.createdAt)}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium leading-tight line-clamp-1">
+                    {itemLabel(entry)}
+                  </p>
+                  {entry.tags?.length > 0 && (
+                    <div className="flex gap-1 mt-1 flex-wrap">
+                      {entry.tags.slice(0, 2).map((tag: string) => (
+                        <span
+                          key={tag}
+                          className="text-[9px] text-muted-foreground bg-muted/60 rounded px-1 py-0.5"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 pt-0.5">
+                  {entry.summary ?? entry.content}
+                </p>
+              </button>
+            ))}
           </div>
         )}
       </div>
-      <div className="p-3">
-        <h4 className="font-semibold text-sm leading-tight line-clamp-1">
-          {displayTitle(entry)}
-        </h4>
-        <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
-          {entry.summary ?? entry.content}
-        </p>
-        <div className="flex items-center gap-1.5 mt-2">
-          {entry.tags?.slice(0, 3).map((tag: string) => (
-            <Badge key={tag} variant="outline" className="text-[10px] h-4">
-              {tag}
-            </Badge>
-          ))}
-          <span className="text-[10px] text-muted-foreground ml-auto">
-            {formatRelativeTime(entry.createdAt)}
-          </span>
+
+      {/* Scroll hint */}
+      {!isLast && (
+        <div className="flex justify-center pt-4 animate-bounce">
+          <ChevronDown className="h-4 w-4 text-muted-foreground/40" />
         </div>
-      </div>
-    </button>
-  );
-}
-
-/* ── Compact Card (horizontal thumbnail + text) ──── */
-
-function CompactCard({
-  entry,
-  onClick,
-  moreCount,
-}: {
-  entry: any;
-  onClick: () => void;
-  moreCount?: number;
-}) {
-  const imageUrl = getImageUrl(entry);
-  const hasImage = !!imageUrl;
-  const gradient = getGradient(entry.categoryColor);
-
-  return (
-    <button
-      onClick={onClick}
-      className="w-full text-left rounded-xl overflow-hidden shadow-sm border border-border/50 bg-card transition-all duration-200 active:scale-[0.98] hover:shadow-md flex h-28"
-    >
-      {/* Thumbnail */}
-      <div
-        className={cn(
-          "w-28 shrink-0 relative overflow-hidden",
-          !hasImage && `bg-gradient-to-br ${gradient}`
-        )}
-      >
-        {hasImage ? (
-          <img
-            src={imageUrl}
-            alt=""
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
-        ) : (
-          <div className="flex items-center justify-center h-full">
-            <Sparkles className="h-5 w-5 text-white/30" />
-          </div>
-        )}
-        {moreCount != null && moreCount > 0 && (
-          <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 bg-black/50 backdrop-blur-sm text-white text-[9px] font-medium px-1.5 py-0.5 rounded-full">
-            <Layers className="h-2.5 w-2.5" />
-            +{moreCount}
-          </div>
-        )}
-      </div>
-
-      {/* Text */}
-      <div className="flex-1 p-3 min-w-0 flex flex-col">
-        {entry.categoryName && (
-          <span
-            className="inline-block self-start px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide mb-1"
-            style={{
-              backgroundColor: entry.categoryColor ?? "#6B7280",
-              color: "#fff",
-            }}
-          >
-            {entry.categoryName}
-          </span>
-        )}
-        <h4 className="font-semibold text-sm leading-tight line-clamp-2">
-          {displayTitle(entry)}
-        </h4>
-        <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed flex-1">
-          {entry.summary ?? entry.content}
-        </p>
-        <div className="flex items-center gap-1.5 mt-auto">
-          {entry.tags?.slice(0, 2).map((tag: string) => (
-            <Badge key={tag} variant="outline" className="text-[10px] h-4">
-              {tag}
-            </Badge>
-          ))}
-          <span className="text-[10px] text-muted-foreground ml-auto">
-            {formatRelativeTime(entry.createdAt)}
-          </span>
-        </div>
-      </div>
-    </button>
+      )}
+    </section>
   );
 }
 
 /* ── Main Panel ────────────────────────────────────── */
 
-export function DiscoverPanel({ onOpenEntry }: DiscoverPanelProps) {
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(
-    null
-  );
+const CATEGORY_ORDER = ["Trips", "Entertainment", "To Read", "Other"];
 
-  const feed = trpc.discover.feed.useQuery(
-    { categoryId: selectedCategory ?? undefined },
-    { retry: 2 }
-  );
+export function DiscoverPanel({ onOpenEntry }: DiscoverPanelProps) {
+  const feed = trpc.discover.feed.useQuery(undefined, { retry: 2 });
 
   /* Loading skeleton */
   if (feed.isLoading) {
     return (
-      <div className="h-full overflow-y-auto pt-10 pb-4 space-y-4">
+      <div className="h-full overflow-y-auto pt-12 pb-4 space-y-4">
         <div className="flex items-center gap-2 px-4">
-          <Compass className="h-5 w-5 text-primary" />
-          <h1 className="text-lg font-semibold">Discover</h1>
+          <FolderOpen className="h-5 w-5 text-primary" />
+          <h1 className="text-lg font-semibold">Digital Dashboard</h1>
         </div>
-        <div className="flex gap-2 px-4">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-8 w-20 rounded-full shrink-0" />
+        <div className="px-4 space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-40 w-full rounded-xl" />
           ))}
-        </div>
-        <div className="px-4 space-y-4">
-          <Skeleton className="h-64 w-full rounded-2xl" />
-          <Skeleton className="h-28 w-full rounded-xl" />
-          <Skeleton className="h-28 w-full rounded-xl" />
         </div>
       </div>
     );
@@ -415,14 +191,14 @@ export function DiscoverPanel({ onOpenEntry }: DiscoverPanelProps) {
   /* Error state */
   if (feed.isError) {
     return (
-      <div className="h-full overflow-y-auto pt-10 pb-4 space-y-4">
+      <div className="h-full overflow-y-auto pt-12 pb-4 space-y-4">
         <div className="flex items-center gap-2 px-4">
-          <Compass className="h-5 w-5 text-primary" />
-          <h1 className="text-lg font-semibold">Discover</h1>
+          <FolderOpen className="h-5 w-5 text-primary" />
+          <h1 className="text-lg font-semibold">Digital Dashboard</h1>
         </div>
         <div className="text-center py-16 text-muted-foreground">
-          <Compass className="h-12 w-12 mx-auto mb-4 opacity-20" />
-          <p className="text-sm">Could not load discoveries</p>
+          <FolderOpen className="h-12 w-12 mx-auto mb-4 opacity-20" />
+          <p className="text-sm">Could not load dashboard</p>
           <button
             onClick={() => feed.refetch()}
             className="text-sm text-primary mt-2 underline"
@@ -435,78 +211,76 @@ export function DiscoverPanel({ onOpenEntry }: DiscoverPanelProps) {
   }
 
   const data = feed.data;
-  const entries = data?.entries ?? [];
-  const categories = data?.categories ?? [];
-  const totalCount = data?.totalCount ?? entries.length;
+  const allEntries = data?.entries ?? [];
 
-  // In "All" view, entries are already deduplicated by category from the backend.
-  // Pick the entry with the most tags as the featured card.
-  const sortedByRichness = [...entries].sort(
-    (a, b) => (b.tags?.length ?? 0) - (a.tags?.length ?? 0)
-  );
-  const featured = sortedByRichness[0];
-  const rest = featured
-    ? entries.filter((e) => e.id !== featured.id)
-    : [];
+  // Group entries by category name
+  const grouped: Record<string, any[]> = {};
+  for (const cat of CATEGORY_ORDER) {
+    grouped[cat] = [];
+  }
+  for (const entry of allEntries) {
+    const catName = entry.categoryName ?? "Other";
+    if (!grouped[catName]) grouped[catName] = [];
+    grouped[catName].push(entry);
+  }
+
+  const hasEntries = allEntries.length > 0;
 
   return (
-    <div className="h-full overflow-y-auto pt-10 pb-4">
-      {/* Header */}
-      <div className="flex items-center gap-2 px-4 mb-3">
-        <Compass className="h-5 w-5 text-primary" />
-        <h1 className="text-lg font-semibold">Discover</h1>
-      </div>
+    <div className="h-full overflow-y-auto snap-y snap-mandatory">
+      {/* Title section — also snaps */}
+      <section className="min-h-[100dvh] snap-start flex flex-col items-center justify-center px-6">
+        <FolderOpen className="h-10 w-10 text-primary mb-3" />
+        <h1 className="text-2xl font-bold tracking-tight mb-1">
+          Your Digital Dashboard
+        </h1>
+        <p className="text-sm text-muted-foreground text-center mb-8">
+          {hasEntries
+            ? `${allEntries.length} ideas organized across ${CATEGORY_ORDER.length} categories`
+            : "Swipe right to catch your first idea"}
+        </p>
 
-      {/* Scrollable category chips */}
-      {categories.length > 0 && (
-        <div className="mb-4">
-          <CategoryChips
-            categories={categories}
-            selected={selectedCategory}
-            totalCount={totalCount}
-            onSelect={setSelectedCategory}
+        {/* Category quick-jump */}
+        {hasEntries && (
+          <div className="flex flex-col gap-2 w-full max-w-xs">
+            {CATEGORY_ORDER.map((cat) => {
+              const meta = getCategoryMeta(cat);
+              const Icon = meta.icon;
+              const count = grouped[cat]?.length ?? 0;
+              return (
+                <div
+                  key={cat}
+                  className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-card/60 border border-border/40"
+                >
+                  <Icon className={cn("h-4 w-4", meta.accent)} />
+                  <span className="text-sm font-medium flex-1">{cat}</span>
+                  <span className="text-xs text-muted-foreground tabular-nums">
+                    {count}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {hasEntries && (
+          <div className="flex justify-center pt-8 animate-bounce">
+            <ChevronDown className="h-5 w-5 text-muted-foreground/40" />
+          </div>
+        )}
+      </section>
+
+      {/* Category sections */}
+      {hasEntries &&
+        CATEGORY_ORDER.map((cat, i) => (
+          <CategorySection
+            key={cat}
+            name={cat}
+            entries={grouped[cat] ?? []}
+            onOpenEntry={onOpenEntry}
+            isLast={i === CATEGORY_ORDER.length - 1}
           />
-        </div>
-      )}
-
-      {/* Cards */}
-      {entries.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground px-4">
-          <Compass className="h-12 w-12 mx-auto mb-4 opacity-20" />
-          <p className="text-lg font-medium">No discoveries yet</p>
-          <p className="text-sm mt-1">Swipe right to catch your first idea</p>
-        </div>
-      ) : (
-        <div className="px-4 space-y-4 pb-8">
-          {/* Hero card — most "rich" entry */}
-          {featured && (
-            <FeaturedCard
-              entry={featured}
-              onClick={() => onOpenEntry(featured.id)}
-              moreCount={featured.moreInCategory}
-            />
-          )}
-
-          {/* Mixed layout: alternate wide and compact for variety */}
-          {rest.map((entry, i) =>
-            i % 3 === 1 ? (
-              <WideCard
-                key={entry.id}
-                entry={entry}
-                onClick={() => onOpenEntry(entry.id)}
-                moreCount={entry.moreInCategory}
-              />
-            ) : (
-              <CompactCard
-                key={entry.id}
-                entry={entry}
-                onClick={() => onOpenEntry(entry.id)}
-                moreCount={entry.moreInCategory}
-              />
-            )
-          )}
-        </div>
-      )}
+        ))}
     </div>
   );
 }

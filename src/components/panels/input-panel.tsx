@@ -11,12 +11,6 @@ interface InputPanelProps {
   onOpenEntry: (id: string) => void;
 }
 
-const QUICK_PROMPTS = [
-  "Plan a weekend trip",
-  "App idea",
-  "Book recommendation",
-  "Meeting notes",
-];
 
 export function InputPanel({ onOpenSettings }: InputPanelProps) {
   const [content, setContent] = useState("");
@@ -113,22 +107,6 @@ export function InputPanel({ onOpenSettings }: InputPanelProps) {
                 <Send className="h-4 w-4" />
               )}
             </Button>
-          </div>
-
-          {/* Quick prompt chips */}
-          <div className="flex gap-2 mt-3 flex-wrap justify-center">
-            {QUICK_PROMPTS.map((prompt) => (
-              <button
-                key={prompt}
-                onClick={() => {
-                  setContent(prompt);
-                  textareaRef.current?.focus();
-                }}
-                className="px-3 py-1.5 rounded-full text-xs border border-border/50 text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
-              >
-                {prompt}
-              </button>
-            ))}
           </div>
 
           {/* Saved confirmation */}
