@@ -223,6 +223,10 @@ export const entryRouter = createRouter({
           collections: { include: { collection: true } },
           edgesFrom: { include: { target: true } },
           edgesTo: { include: { source: true } },
+          attachments: {
+            select: { id: true, filename: true, mimeType: true, size: true, createdAt: true },
+            orderBy: { createdAt: "asc" },
+          },
         },
       });
       if (!entry) throw new Error("Entry not found");

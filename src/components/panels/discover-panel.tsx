@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   Circle,
   Search,
+  Paperclip,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -242,8 +243,11 @@ function CategoryAccordion({
                       {shortDate(entry.createdAt)}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium leading-tight line-clamp-1">
+                      <p className="text-sm font-medium leading-tight line-clamp-1 flex items-center gap-1">
                         {itemLabel(entry)}
+                        {entry.attachmentCount > 0 && (
+                          <Paperclip className="h-3 w-3 text-muted-foreground inline shrink-0" />
+                        )}
                       </p>
                       {entry.tags?.length > 0 && (
                         <div className="flex gap-1 mt-1 flex-wrap">

@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trash2, ExternalLink } from "lucide-react";
+import { Trash2, ExternalLink, FileText, Download, Image as ImageIcon, Paperclip } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { formatDate, getEntryTypeColor } from "@/lib/utils";
 import { toast } from "sonner";
@@ -19,6 +19,12 @@ interface EntryDetailSheetProps {
   entryId: string | null;
   open: boolean;
   onClose: () => void;
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export function EntryDetailSheet({ entryId, open, onClose }: EntryDetailSheetProps) {
@@ -40,6 +46,7 @@ export function EntryDetailSheet({ entryId, open, onClose }: EntryDetailSheetPro
 
   const data = entry.data;
   const urls = (data?.metadata as any)?.urls as any[] | undefined;
+  const attachments = data?.attachments ?? [];
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -85,6 +92,63 @@ export function EntryDetailSheet({ entryId, open, onClose }: EntryDetailSheetPro
 
             {/* Content */}
             <div className="text-sm whitespace-pre-wrap">{data.content}</div>
+
+            {/* Attachments */}
+            {attachments.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
+                  <Paperclip className="h-3 w-3" />
+                  Attachments ({attachments.length})
+                </p>
+                <div className="space-y-2">
+                  {attachments.map((att) => {
+                    const isImage = att.mimeType.startsWith("image/");
+                    const fileUrl = `/api/files/${att.id}`;
+                    return (
+                      <div key={att.id}>
+                        {/* Inline image preview */}
+                        {isImage && (
+                          <a
+                            href={fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block mb-1.5"
+                          >
+                            <img
+                              src={fileUrl}
+                              alt={att.filename}
+                              className="rounded-lg border border-border/40 max-h-48 w-auto object-contain"
+                            />
+                          </a>
+                        )}
+                        {/* File info row */}
+                        <a
+                          href={fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-3 rounded-lg border border-border/40 p-2.5 hover:bg-muted/50 transition-colors"
+                        >
+                          {isImage ? (
+                            <ImageIcon className="h-4 w-4 text-blue-400 shrink-0" />
+                          ) : (
+                            <FileText className="h-4 w-4 text-orange-400 shrink-0" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">
+                              {att.filename}
+                            </p>
+                            <p className="text-[11px] text-muted-foreground">
+                              {formatFileSize(att.size)}
+                            </p>
+                          </div>
+                          <Download className="h-4 w-4 text-muted-foreground shrink-0" />
+                        </a>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* URL previews */}
             {urls && urls.length > 0 && (
