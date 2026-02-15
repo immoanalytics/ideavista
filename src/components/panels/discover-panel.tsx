@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -11,8 +11,14 @@ import {
   MoreHorizontal,
   FolderOpen,
   ChevronRight,
+  Trash2,
+  X,
+  CheckCircle2,
+  Circle,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface DiscoverPanelProps {
   onOpenEntry: (id: string) => void;
@@ -93,15 +99,64 @@ function CategoryAccordion({
   expanded,
   onToggle,
   onOpenEntry,
+  selecting,
+  selected,
+  onLongPress,
+  onToggleSelect,
 }: {
   name: string;
   entries: any[];
   expanded: boolean;
   onToggle: () => void;
   onOpenEntry: (id: string) => void;
+  selecting: boolean;
+  selected: Set<string>;
+  onLongPress: (id: string) => void;
+  onToggleSelect: (id: string) => void;
 }) {
   const meta = getCategoryMeta(name);
   const Icon = meta.icon;
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressTriggered = useRef(false);
+
+  const selectedInCategory = entries.filter((e) => selected.has(e.id)).length;
+
+  const handlePointerDown = useCallback(
+    (id: string) => {
+      longPressTriggered.current = false;
+      longPressTimer.current = setTimeout(() => {
+        longPressTriggered.current = true;
+        onLongPress(id);
+      }, 500);
+    },
+    [onLongPress]
+  );
+
+  const handlePointerUp = useCallback(
+    (id: string) => {
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+        longPressTimer.current = null;
+      }
+      if (longPressTriggered.current) {
+        longPressTriggered.current = false;
+        return;
+      }
+      if (selecting) {
+        onToggleSelect(id);
+      } else {
+        onOpenEntry(id);
+      }
+    },
+    [selecting, onToggleSelect, onOpenEntry]
+  );
+
+  const handlePointerLeave = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
 
   return (
     <div
@@ -129,6 +184,11 @@ function CategoryAccordion({
           <Icon className="h-4 w-4" />
         </div>
         <span className="text-sm font-semibold flex-1 text-left">{name}</span>
+        {selecting && selectedInCategory > 0 && (
+          <Badge variant="default" className="text-[10px] h-5 tabular-nums mr-1">
+            {selectedInCategory}
+          </Badge>
+        )}
         <Badge
           variant="secondary"
           className="text-[10px] h-5 tabular-nums mr-1"
@@ -152,40 +212,58 @@ function CategoryAccordion({
             </div>
           ) : (
             <div className="rounded-xl border border-border/30 bg-card/70 backdrop-blur-sm overflow-hidden">
-              {entries.map((entry, i) => (
-                <button
-                  key={entry.id}
-                  onClick={() => onOpenEntry(entry.id)}
-                  className={cn(
-                    "w-full text-left flex items-start gap-3 px-3 py-2.5 transition-colors hover:bg-muted/40 active:bg-muted/60",
-                    i < entries.length - 1 && "border-b border-border/20"
-                  )}
-                >
-                  <span className="text-[11px] text-muted-foreground tabular-nums pt-0.5 shrink-0 w-[38px]">
-                    {shortDate(entry.createdAt)}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium leading-tight line-clamp-1">
-                      {itemLabel(entry)}
-                    </p>
-                    {entry.tags?.length > 0 && (
-                      <div className="flex gap-1 mt-1 flex-wrap">
-                        {entry.tags.slice(0, 2).map((tag: string) => (
-                          <span
-                            key={tag}
-                            className="text-[9px] text-muted-foreground bg-muted/60 rounded px-1 py-0.5"
-                          >
-                            {tag}
-                          </span>
-                        ))}
+              {entries.map((entry, i) => {
+                const isSelected = selected.has(entry.id);
+                return (
+                  <div
+                    key={entry.id}
+                    onPointerDown={() => handlePointerDown(entry.id)}
+                    onPointerUp={() => handlePointerUp(entry.id)}
+                    onPointerLeave={handlePointerLeave}
+                    onContextMenu={(e) => e.preventDefault()}
+                    className={cn(
+                      "w-full text-left flex items-start gap-3 px-3 py-2.5 transition-colors select-none cursor-pointer",
+                      selecting && isSelected
+                        ? "bg-primary/10"
+                        : "hover:bg-muted/40 active:bg-muted/60",
+                      i < entries.length - 1 && "border-b border-border/20"
+                    )}
+                  >
+                    {selecting && (
+                      <div className="shrink-0 pt-0.5">
+                        {isSelected ? (
+                          <CheckCircle2 className="h-4.5 w-4.5 text-primary" />
+                        ) : (
+                          <Circle className="h-4.5 w-4.5 text-muted-foreground/40" />
+                        )}
                       </div>
                     )}
+                    <span className="text-[11px] text-muted-foreground tabular-nums pt-0.5 shrink-0 w-[38px]">
+                      {shortDate(entry.createdAt)}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium leading-tight line-clamp-1">
+                        {itemLabel(entry)}
+                      </p>
+                      {entry.tags?.length > 0 && (
+                        <div className="flex gap-1 mt-1 flex-wrap">
+                          {entry.tags.slice(0, 2).map((tag: string) => (
+                            <span
+                              key={tag}
+                              className="text-[9px] text-muted-foreground bg-muted/60 rounded px-1 py-0.5"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2 pt-0.5 max-w-[40%] shrink-0 hidden sm:block">
+                      {entry.summary ?? entry.content}
+                    </p>
                   </div>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2 pt-0.5 max-w-[40%] shrink-0 hidden sm:block">
-                    {entry.summary ?? entry.content}
-                  </p>
-                </button>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -201,6 +279,23 @@ const CATEGORY_ORDER = ["Trips", "Entertainment", "To Read", "Other"];
 export function DiscoverPanel({ onOpenEntry }: DiscoverPanelProps) {
   const feed = trpc.discover.feed.useQuery(undefined, { retry: 2 });
   const [expanded, setExpanded] = useState<Set<string>>(new Set(CATEGORY_ORDER));
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState("");
+
+  const utils = trpc.useUtils();
+
+  const deleteMany = trpc.entry.deleteMany.useMutation({
+    onSuccess: ({ deleted }) => {
+      toast.success(`Deleted ${deleted} idea${deleted === 1 ? "" : "s"}`);
+      setSelecting(false);
+      setSelected(new Set());
+      utils.discover.feed.invalidate();
+      utils.entry.list.invalidate();
+      utils.entry.stats.invalidate();
+    },
+    onError: (err) => toast.error(err.message),
+  });
 
   const toggleCategory = (cat: string) => {
     setExpanded((prev) => {
@@ -210,6 +305,25 @@ export function DiscoverPanel({ onOpenEntry }: DiscoverPanelProps) {
       return next;
     });
   };
+
+  const exitSelection = useCallback(() => {
+    setSelecting(false);
+    setSelected(new Set());
+  }, []);
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const handleLongPress = useCallback((id: string) => {
+    setSelecting(true);
+    setSelected(new Set([id]));
+  }, []);
 
   /* Loading skeleton */
   if (feed.isLoading) {
@@ -251,7 +365,19 @@ export function DiscoverPanel({ onOpenEntry }: DiscoverPanelProps) {
   }
 
   const data = feed.data;
-  const allEntries = data?.entries ?? [];
+  let allEntries = data?.entries ?? [];
+
+  // Apply search filter
+  if (search) {
+    const q = search.toLowerCase();
+    allEntries = allEntries.filter(
+      (e) =>
+        e.title?.toLowerCase().includes(q) ||
+        e.summary?.toLowerCase().includes(q) ||
+        e.content?.toLowerCase().includes(q) ||
+        e.tags?.some((t: string) => t.toLowerCase().includes(q))
+    );
+  }
 
   // Group entries by category name
   const grouped: Record<string, any[]> = {};
@@ -270,23 +396,89 @@ export function DiscoverPanel({ onOpenEntry }: DiscoverPanelProps) {
   );
   const allCategories = [...CATEGORY_ORDER, ...dynamicCategories];
 
-  const hasEntries = allEntries.length > 0;
+  const hasEntries = (data?.entries ?? []).length > 0;
+
+  const selectAllVisible = () => {
+    setSelected(new Set(allEntries.map((e) => e.id)));
+  };
 
   return (
     <div className="flex flex-col h-dvh bg-background">
       {/* Header */}
       <div className="px-4 pt-10 pb-2 shrink-0">
-        <div className="flex items-center gap-2 mb-1">
-          <FolderOpen className="h-5 w-5 text-primary" />
-          <h1 className="text-lg font-semibold">Digital Dashboard</h1>
-          <span className="text-xs text-muted-foreground ml-auto tabular-nums">
-            {allEntries.length} ideas
-          </span>
-        </div>
-        {hasEntries && (
-          <p className="text-[11px] text-muted-foreground/60 px-0.5">
-            AI-organized across {allCategories.filter((c) => (grouped[c]?.length ?? 0) > 0).length} categories
-          </p>
+        {selecting ? (
+          /* Selection mode header */
+          <div className="flex items-center gap-2 mb-2">
+            <button
+              onClick={exitSelection}
+              className="p-1 -ml-1 rounded-lg hover:bg-muted"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <span className="text-sm font-semibold flex-1">
+              {selected.size} selected
+            </span>
+            <button
+              onClick={selectAllVisible}
+              className="text-xs text-primary font-medium px-2 py-1 rounded-lg hover:bg-primary/10"
+            >
+              Select all
+            </button>
+            <button
+              onClick={() => {
+                if (selected.size === 0) return;
+                deleteMany.mutate({ ids: Array.from(selected) });
+              }}
+              disabled={selected.size === 0 || deleteMany.isPending}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
+                selected.size > 0
+                  ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  : "bg-muted text-muted-foreground"
+              )}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete{deleteMany.isPending ? "…" : ""}
+            </button>
+          </div>
+        ) : (
+          /* Normal header */
+          <>
+            <div className="flex items-center gap-2 mb-1">
+              <FolderOpen className="h-5 w-5 text-primary" />
+              <h1 className="text-lg font-semibold">Digital Dashboard</h1>
+              <span className="text-xs text-muted-foreground ml-auto tabular-nums">
+                {allEntries.length} ideas
+              </span>
+            </div>
+            {hasEntries && (
+              <p className="text-[11px] text-muted-foreground/60 px-0.5 mb-2">
+                AI-organized across {allCategories.filter((c) => (grouped[c]?.length ?? 0) > 0).length} categories &middot; hold to select
+              </p>
+            )}
+
+            {/* Search */}
+            {hasEntries && (
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search ideas..."
+                  className="w-full rounded-xl border border-border/60 bg-card pl-9 pr-8 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 placeholder:text-muted-foreground/60"
+                />
+                {search && (
+                  <button
+                    onClick={() => setSearch("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-muted"
+                  >
+                    <X className="h-3.5 w-3.5 text-muted-foreground" />
+                  </button>
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -309,6 +501,10 @@ export function DiscoverPanel({ onOpenEntry }: DiscoverPanelProps) {
                 expanded={expanded.has(cat)}
                 onToggle={() => toggleCategory(cat)}
                 onOpenEntry={onOpenEntry}
+                selecting={selecting}
+                selected={selected}
+                onLongPress={handleLongPress}
+                onToggleSelect={toggleSelect}
               />
             ))}
           </div>

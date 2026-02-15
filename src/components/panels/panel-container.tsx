@@ -6,14 +6,13 @@ import { cn } from "@/lib/utils";
 
 interface PanelContainerProps {
   inputPanel: React.ReactNode;
-  archivePanel: React.ReactNode;
   discoverPanel: React.ReactNode;
 }
 
-const PANEL_COUNT = 3;
-const PANEL_LABELS = ["Idea Catcher", "Idea Book", "Digital Dashboard"];
+const PANEL_COUNT = 2;
+const PANEL_LABELS = ["Idea Catcher", "Digital Dashboard"];
 
-export function PanelContainer({ inputPanel, archivePanel, discoverPanel }: PanelContainerProps) {
+export function PanelContainer({ inputPanel, discoverPanel }: PanelContainerProps) {
   const [activePanel, setActivePanel] = useState(0);
   const [swiping, setSwiping] = useState(false);
   const [deltaX, setDeltaX] = useState(0);
@@ -55,7 +54,7 @@ export function PanelContainer({ inputPanel, archivePanel, discoverPanel }: Pane
     preventScrollOnSwipe: true,
   });
 
-  // Desktop: side by side (input + discover, archive accessible via nav)
+  // Desktop: side by side
   if (isDesktop) {
     return (
       <div className="h-dvh grid grid-cols-2 divide-x">
@@ -65,9 +64,7 @@ export function PanelContainer({ inputPanel, archivePanel, discoverPanel }: Pane
     );
   }
 
-  // Mobile: swipeable 3 panels
-  // Use pixel values for translateX to avoid CSS percentage pitfalls
-  // (translateX(%) is relative to the element's own width, not the viewport)
+  // Mobile: swipeable 2 panels
   const windowWidth = typeof window !== "undefined" ? window.innerWidth : 0;
   const translatePx = swiping
     ? -activePanel * windowWidth + deltaX
@@ -99,7 +96,6 @@ export function PanelContainer({ inputPanel, archivePanel, discoverPanel }: Pane
         }}
       >
         <div style={{ width: `${100 / PANEL_COUNT}%` }} className="h-full overflow-hidden">{inputPanel}</div>
-        <div style={{ width: `${100 / PANEL_COUNT}%` }} className="h-full overflow-hidden">{archivePanel}</div>
         <div style={{ width: `${100 / PANEL_COUNT}%` }} className="h-full overflow-hidden">{discoverPanel}</div>
       </div>
     </div>
