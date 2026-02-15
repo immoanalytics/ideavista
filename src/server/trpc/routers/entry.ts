@@ -24,7 +24,6 @@ async function processEntryPipeline(
         update: {},
         create: {
           name: categorization.categoryName,
-          color: categorization.categoryColor,
         },
       });
       categoryId = category.id;

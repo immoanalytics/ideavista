@@ -34,7 +34,6 @@ export const aiRouter = createRouter({
           update: {},
           create: {
             name: categorization.categoryName,
-            color: categorization.categoryColor,
           },
         });
         categoryId = category.id;

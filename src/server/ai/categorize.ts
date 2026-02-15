@@ -6,8 +6,7 @@ import { CATEGORIZE_PROMPT } from "./prompts";
 
 const categorizationSchema = z.object({
   type: z.enum(["NOTE", "IDEA", "REMINDER", "TRIP", "TASK", "BOOKMARK", "JOURNAL"]),
-  categoryName: z.string(),
-  categoryColor: z.string().optional(),
+  categoryName: z.enum(["Trips", "Entertainment", "To Read", "Other"]),
   tags: z.array(z.string()).max(5),
   summary: z.string(),
   imageKeyword: z.string().optional(),
