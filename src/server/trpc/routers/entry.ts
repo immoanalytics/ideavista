@@ -6,6 +6,7 @@ import { extractUrlMetadata } from "@/server/ai/metadata";
 import { categorizeEntry } from "@/server/ai/categorize";
 import { generateEmbedding, findSimilarEntries } from "@/server/ai/embed";
 import { detectRelationships } from "@/server/ai/relate";
+import { analyzeAttachments } from "@/server/ai/attachments";
 import type { AiProviderConfig, Entry } from "@prisma/client";
 
 /* ── Keyword-based fallback categorizer (no AI needed) ── */
@@ -337,4 +338,64 @@ export const entryRouter = createRouter({
       return { total: 0, byType: [] };
     }
   }),
+
+  reprocess: protectedProcedure
+    .input(z.object({ id: z.string().cuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const entry = await ctx.db.entry.findFirst({
+        where: { id: input.id, userId: ctx.userId },
+        include: {
+          attachments: { select: { filename: true, mimeType: true, data: true } },
+        },
+      });
+      if (!entry) throw new Error("Entry not found");
+
+      const config = await ctx.db.aiProviderConfig.findUnique({
+        where: { userId: ctx.userId },
+      });
+
+      // Build enriched content from entry text + attachment analysis
+      let enrichedContent = `${entry.title}\n${entry.content}`;
+
+      if (entry.attachments.length > 0 && config) {
+        try {
+          const attachmentText = await analyzeAttachments(
+            config,
+            entry.attachments.map((a) => ({
+              filename: a.filename,
+              mimeType: a.mimeType,
+              data: Buffer.from(a.data),
+            }))
+          );
+          if (attachmentText) {
+            enrichedContent += `\n\n--- Attached files ---\n${attachmentText}`;
+          }
+        } catch (e) {
+          console.warn("Attachment analysis failed:", e);
+          // Still include filenames as fallback context
+          const filenames = entry.attachments.map((a) => a.filename).join(", ");
+          enrichedContent += `\n\n[Attached files: ${filenames}]`;
+        }
+      } else if (entry.attachments.length > 0) {
+        // No AI config, just add filenames for keyword fallback
+        const filenames = entry.attachments.map((a) => a.filename).join(", ");
+        enrichedContent += `\n\n[Attached files: ${filenames}]`;
+      }
+
+      // Create a virtual entry with enriched content for the pipeline
+      const enrichedEntry = {
+        id: entry.id,
+        title: entry.title,
+        content: enrichedContent,
+      };
+
+      // Re-run the pipeline (fire-and-forget)
+      if (config) {
+        processEntryPipeline(ctx.db, config, enrichedEntry, ctx.userId).catch(() => {});
+      } else {
+        fallbackProcessEntry(ctx.db, enrichedEntry).catch(() => {});
+      }
+
+      return { success: true };
+    }),
 });

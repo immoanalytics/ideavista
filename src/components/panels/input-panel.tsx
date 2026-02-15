@@ -50,12 +50,14 @@ export function InputPanel({ onOpenSettings }: InputPanelProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const utils = trpc.useUtils();
+  const reprocess = trpc.entry.reprocess.useMutation();
 
   const createEntry = trpc.entry.create.useMutation({
     onSuccess: async (entry) => {
-      // Upload pending files
+      // Upload pending files, then trigger AI reprocessing
       if (pendingFiles.length > 0) {
         setUploading(true);
+        let uploadOk = true;
         try {
           await Promise.all(
             pendingFiles.map(async ({ file }) => {
@@ -70,10 +72,16 @@ export function InputPanel({ onOpenSettings }: InputPanelProps) {
             })
           );
         } catch (err: any) {
+          uploadOk = false;
           toast.error(`File upload failed: ${err.message}`);
         } finally {
           setUploading(false);
           setPendingFiles([]);
+        }
+
+        // Re-run AI categorization with attachment context
+        if (uploadOk) {
+          reprocess.mutate({ id: entry.id });
         }
       }
 
