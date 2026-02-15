@@ -8,6 +8,86 @@ import { generateEmbedding, findSimilarEntries } from "@/server/ai/embed";
 import { detectRelationships } from "@/server/ai/relate";
 import type { AiProviderConfig, Entry } from "@prisma/client";
 
+/* ── Keyword-based fallback categorizer (no AI needed) ── */
+
+const CATEGORY_KEYWORDS: Record<string, string[]> = {
+  Trips: [
+    "trip", "travel", "flight", "hotel", "airbnb", "booking", "airline",
+    "airport", "destination", "vacation", "holiday", "ticket", "resort",
+    "hostel", "itinerary", "passport", "luggage", "suitcase", "cruise",
+    "bus", "train", "rental", "car hire", "slovenia", "malta", "paris",
+    "london", "rome", "barcelona", "tokyo", "beach", "mountain", "hiking",
+    "restaurant", "menu", "reservation", "ryanair", "easyjet", "maps",
+    "google maps", "pin", "location",
+  ],
+  Entertainment: [
+    "movie", "film", "watch", "netflix", "hbo", "disney", "paramount",
+    "series", "show", "episode", "season", "trailer", "cinema", "theatre",
+    "concert", "music", "album", "song", "spotify", "youtube", "podcast",
+    "game", "gaming", "playstation", "xbox", "nintendo", "steam",
+    "watchlist", "silo", "red alert", "karpathy",
+  ],
+  "To Read": [
+    "read", "article", "blog", "post", "book", "paper", "tutorial",
+    "guide", "documentation", "docs", "link", "url", "http", "https",
+    "reference", "bookmark", "save for later", "try later", "check out",
+    "look into", "research", "learn", "course", "study", "medium",
+    "substack", "newsletter", "pdf", "ebook",
+  ],
+};
+
+function fallbackCategorize(text: string): {
+  categoryName: "Trips" | "Entertainment" | "To Read" | "Other";
+  summary: string;
+} {
+  const lower = text.toLowerCase();
+  let bestCategory: "Trips" | "Entertainment" | "To Read" | "Other" = "Other";
+  let bestScore = 0;
+
+  for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+    let score = 0;
+    for (const kw of keywords) {
+      if (lower.includes(kw)) score++;
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      bestCategory = category as any;
+    }
+  }
+
+  const summary = text.slice(0, 120).replace(/\n/g, " ").trim() +
+    (text.length > 120 ? "…" : "");
+
+  return { categoryName: bestCategory, summary };
+}
+
+async function fallbackProcessEntry(
+  db: any,
+  entry: Pick<Entry, "id" | "title" | "content">,
+) {
+  try {
+    const { categoryName, summary } = fallbackCategorize(
+      `${entry.title} ${entry.content}`
+    );
+
+    const category = await db.category.upsert({
+      where: { name: categoryName },
+      update: {},
+      create: { name: categoryName },
+    });
+
+    await db.entry.update({
+      where: { id: entry.id },
+      data: {
+        summary,
+        aiCategoryId: category.id,
+      },
+    });
+  } catch (e) {
+    console.warn("Fallback categorization failed:", entry.id, e);
+  }
+}
+
 async function processEntryPipeline(
   db: any,
   config: AiProviderConfig,
@@ -194,9 +274,11 @@ export const entryRouter = createRouter({
         },
       });
 
-      // 4. Fire-and-forget AI processing
+      // 4. Fire-and-forget AI processing (or keyword fallback)
       if (config) {
         processEntryPipeline(ctx.db, config, entry, ctx.userId).catch(() => {});
+      } else {
+        fallbackProcessEntry(ctx.db, entry).catch(() => {});
       }
 
       return entry;
