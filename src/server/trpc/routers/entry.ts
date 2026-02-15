@@ -160,7 +160,9 @@ async function processEntryPipeline(
       console.warn("Embedding/relationship detection skipped:", e);
     }
   } catch (e) {
-    console.warn("AI processing failed for entry:", entry.id, e);
+    console.warn("AI processing failed, using keyword fallback:", entry.id, e);
+    // Fall back to keyword-based categorization so the entry still gets sorted
+    await fallbackProcessEntry(db, entry);
   }
 }
 
