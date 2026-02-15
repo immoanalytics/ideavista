@@ -311,6 +311,15 @@ export const entryRouter = createRouter({
       return { success: true };
     }),
 
+  deleteMany: protectedProcedure
+    .input(z.object({ ids: z.array(z.string().cuid()).min(1).max(100) }))
+    .mutation(async ({ ctx, input }) => {
+      const result = await ctx.db.entry.deleteMany({
+        where: { id: { in: input.ids }, userId: ctx.userId },
+      });
+      return { deleted: result.count };
+    }),
+
   stats: protectedProcedure.query(async ({ ctx }) => {
     try {
       const counts = await ctx.db.entry.groupBy({
