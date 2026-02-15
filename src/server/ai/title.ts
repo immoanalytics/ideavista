@@ -15,7 +15,7 @@ export async function generateTitle(
   const { object } = await generateObject({
     model,
     schema: titleSchema,
-    prompt: `Generate a short, descriptive title (max 10 words) for this content. The title should capture the core topic.\n\nContent: ${content.slice(0, 2000)}`,
+    prompt: `Generate a concise, summarized title (max 6 words) for this note. The title should be a clean, descriptive headline — NOT a copy of the input. Distill the core topic into a brief label.\n\nNote: ${content.slice(0, 2000)}`,
   });
   return object.title;
 }

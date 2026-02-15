@@ -6,7 +6,7 @@ export const CATEGORIZE_PROMPT = `Analyze the following entry and classify it. R
   * "To Read" — for articles, links to read later, things to try, tutorials, recommendations
   * "Other" — for everything that doesn't clearly fit the above three
 - tags: An array of 1-5 relevant tags (short, lowercase words)
-- summary: A punchy 1-sentence summary (max 120 characters) that captures the key insight. Write it like a headline subtitle — engaging and concise, suitable for a card in a discovery feed.
+- summary: A rephrased, clear version of the original note. Clean up grammar, structure, and wording while preserving all the original meaning and details. Do NOT simply repeat the input — rephrase it in a polished, readable way. For short notes, expand slightly with helpful context. For long notes, condense into the key points. Aim for 1-3 sentences.
 - imageKeyword: A single English keyword (noun) that best represents the visual theme of this entry, suitable for searching stock photography (e.g., "mountain", "laptop", "cooking", "airplane", "notebook")
 
 Entry title: {title}
