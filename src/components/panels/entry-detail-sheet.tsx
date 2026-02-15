@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,9 +11,19 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trash2, ExternalLink, FileText, Download, Image as ImageIcon, Paperclip } from "lucide-react";
+import {
+  Trash2,
+  ExternalLink,
+  FileText,
+  Download,
+  Image as ImageIcon,
+  Paperclip,
+  Sparkles,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import { trpc } from "@/lib/trpc";
-import { formatDate, getEntryTypeColor } from "@/lib/utils";
+import { formatDate, getEntryTypeColor, cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 interface EntryDetailSheetProps {
@@ -28,6 +39,7 @@ function formatFileSize(bytes: number): string {
 }
 
 export function EntryDetailSheet({ entryId, open, onClose }: EntryDetailSheetProps) {
+  const [showOriginal, setShowOriginal] = useState(false);
   const utils = trpc.useUtils();
   const entry = trpc.entry.getById.useQuery(
     { id: entryId! },
@@ -47,9 +59,18 @@ export function EntryDetailSheet({ entryId, open, onClose }: EntryDetailSheetPro
   const data = entry.data;
   const urls = (data?.metadata as any)?.urls as any[] | undefined;
   const attachments = data?.attachments ?? [];
+  const hasSummary = !!data?.summary;
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) {
+          setShowOriginal(false);
+          onClose();
+        }
+      }}
+    >
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         {entry.isLoading ? (
           <div className="space-y-3">
@@ -61,8 +82,11 @@ export function EntryDetailSheet({ entryId, open, onClose }: EntryDetailSheetPro
         ) : data ? (
           <>
             <DialogHeader>
-              <DialogTitle className="pr-8">{data.title}</DialogTitle>
-              <DialogDescription className="flex items-center gap-2 pt-1">
+              <DialogTitle className="pr-8 flex items-center gap-2">
+                {hasSummary && <Sparkles className="h-4 w-4 text-primary/60 shrink-0" />}
+                {data.title}
+              </DialogTitle>
+              <DialogDescription className="flex items-center gap-2 pt-1 flex-wrap">
                 {data.type && (
                   <Badge
                     variant="secondary"
@@ -83,15 +107,44 @@ export function EntryDetailSheet({ entryId, open, onClose }: EntryDetailSheetPro
               </DialogDescription>
             </DialogHeader>
 
-            {/* Summary */}
-            {data.summary && (
-              <div className="bg-primary/5 rounded-lg p-3 text-sm">
+            {/* AI Summary — primary view */}
+            {hasSummary && (
+              <div className="bg-primary/5 rounded-lg p-3 text-sm leading-relaxed">
                 {data.summary}
               </div>
             )}
 
-            {/* Content */}
-            <div className="text-sm whitespace-pre-wrap">{data.content}</div>
+            {/* Toggle: show original note */}
+            {hasSummary && (
+              <button
+                onClick={() => setShowOriginal((v) => !v)}
+                className={cn(
+                  "flex items-center gap-2 text-xs px-2 py-1.5 rounded-lg transition-colors w-fit",
+                  showOriginal
+                    ? "text-primary bg-primary/10"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                )}
+              >
+                {showOriginal ? (
+                  <EyeOff className="h-3.5 w-3.5" />
+                ) : (
+                  <Eye className="h-3.5 w-3.5" />
+                )}
+                {showOriginal ? "Hide original note" : "Show original note"}
+              </button>
+            )}
+
+            {/* Original note (toggled) or main content (if no AI summary) */}
+            {showOriginal ? (
+              <div className="rounded-lg border border-border/40 bg-muted/30 p-3">
+                <p className="text-[11px] text-muted-foreground font-medium mb-1.5">Original note</p>
+                <div className="text-sm whitespace-pre-wrap text-foreground/80 leading-relaxed">
+                  {data.content}
+                </div>
+              </div>
+            ) : !hasSummary ? (
+              <div className="text-sm whitespace-pre-wrap leading-relaxed">{data.content}</div>
+            ) : null}
 
             {/* Attachments */}
             {attachments.length > 0 && (
