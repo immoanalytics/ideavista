@@ -398,4 +398,53 @@ export const entryRouter = createRouter({
 
       return { success: true };
     }),
+
+  reprocessAll: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      const config = await ctx.db.aiProviderConfig.findUnique({
+        where: { userId: ctx.userId },
+      });
+      if (!config) throw new Error("No AI provider configured");
+
+      const entries = await ctx.db.entry.findMany({
+        where: { userId: ctx.userId },
+        select: { id: true, title: true, content: true },
+        orderBy: { createdAt: "desc" },
+      });
+
+      // Process entries sequentially with a small delay to avoid rate limits
+      let count = 0;
+      const process = async () => {
+        for (const entry of entries) {
+          try {
+            // Regenerate title
+            const newTitle = await generateTitle(config, entry.content);
+            if (newTitle) {
+              await ctx.db.entry.update({
+                where: { id: entry.id },
+                data: { title: newTitle },
+              });
+            }
+            // Re-run categorization pipeline with the new title
+            await processEntryPipeline(
+              ctx.db,
+              config,
+              { id: entry.id, title: newTitle || entry.title, content: entry.content },
+              ctx.userId
+            );
+            count++;
+            // Small delay between entries to avoid rate limits
+            await new Promise((r) => setTimeout(r, 500));
+          } catch (e) {
+            console.warn("Reprocess failed for entry:", entry.id, e);
+          }
+        }
+        console.log(`Reprocessed ${count}/${entries.length} entries`);
+      };
+
+      // Fire-and-forget
+      process().catch(() => {});
+
+      return { queued: entries.length };
+    }),
 });

@@ -19,6 +19,7 @@ import {
   Paperclip,
   Eye,
   Sparkles,
+  RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -374,6 +375,18 @@ export function DiscoverPanel({ onOpenEntry }: DiscoverPanelProps) {
     onError: (err) => toast.error(err.message),
   });
 
+  const reprocessAll = trpc.entry.reprocessAll.useMutation({
+    onSuccess: ({ queued }) => {
+      toast.success(`Reprocessing ${queued} entries with AI…`);
+      // Refresh feed after a delay to show updated results
+      setTimeout(() => {
+        utils.discover.feed.invalidate();
+        utils.entry.list.invalidate();
+      }, 5000);
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
   const toggleCategory = (cat: string) => {
     setExpanded((prev) => {
       const next = new Set(prev);
@@ -527,6 +540,19 @@ export function DiscoverPanel({ onOpenEntry }: DiscoverPanelProps) {
               <span className="text-xs text-muted-foreground ml-auto tabular-nums">
                 {allEntries.length} ideas
               </span>
+              {hasEntries && (
+                <button
+                  onClick={() => reprocessAll.mutate()}
+                  disabled={reprocessAll.isPending}
+                  title="Reprocess all entries with AI"
+                  className={cn(
+                    "p-1.5 rounded-lg transition-colors hover:bg-primary/10",
+                    reprocessAll.isPending && "animate-spin"
+                  )}
+                >
+                  <RefreshCw className="h-4 w-4 text-primary/60" />
+                </button>
+              )}
             </div>
             {hasEntries && (
               <p className="text-[11px] text-muted-foreground/60 px-0.5 mb-2">
